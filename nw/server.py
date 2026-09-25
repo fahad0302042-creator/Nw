@@ -1,4 +1,8 @@
-"""FastAPI app: serves the UI and drives the download manager."""
+"""Starlette app: serves the UI and drives the download manager.
+
+Starlette (not FastAPI) so Termux / Python 3.14 can install from wheels
+without compiling pydantic-core or cryptography.
+"""
 
 from __future__ import annotations
 
@@ -7,10 +11,13 @@ import json
 import shutil
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Request
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
-from pydantic import BaseModel, Field
+from starlette.applications import Starlette
+from starlette.middleware import Middleware
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.middleware.cors import CORSMiddleware
+from starlette.requests import Request
+from starlette.responses import FileResponse, JSONResponse, StreamingResponse
+from starlette.routing import Route
 
 from .config import load_config
 from .extractors import get_extractor
@@ -23,110 +30,112 @@ cfg = load_config()
 extractor = get_extractor(cfg)
 manager = DownloadManager(cfg, extractor)
 
-app = FastAPI(title="Nw", version="0.1.0", redirect_slashes=False)
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+
+class PreviewMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        response = await call_next(request)
+        response.headers["Content-Security-Policy"] = "frame-ancestors *"
+        if "x-frame-options" in response.headers:
+            del response.headers["x-frame-options"]
+        return response
 
 
-@app.middleware("http")
-async def allow_preview_iframe(request: Request, call_next):
-    """Preview is shown in an iframe on a different origin — don't block it."""
-    response = await call_next(request)
-    response.headers["Content-Security-Policy"] = "frame-ancestors *"
-    if "x-frame-options" in response.headers:
-        del response.headers["x-frame-options"]
-    return response
-
-
-# --------------------------------------------------------------------- models
-class InspectRequest(BaseModel):
-    url: str = Field(..., min_length=4)
-    quality: str = "auto"
-    refresh: bool = False
-
-
-class DownloadRequest(BaseModel):
-    url: str = Field(..., min_length=4)
-    item_index: int | None = None
-    quality: str = "auto"
-
-
-class UrlRequest(BaseModel):
-    url: str = Field(..., min_length=4)
-
-
-# ------------------------------------------------------------------ web routes
-@app.api_route("/", methods=["GET", "HEAD"])
-def index() -> FileResponse:
-    return FileResponse(WEB_DIR / "index.html")
-
-
-@app.api_route("/app.js", methods=["GET", "HEAD"])
-def app_js() -> FileResponse:
-    return FileResponse(WEB_DIR / "app.js", media_type="application/javascript")
-
-
-@app.api_route("/styles.css", methods=["GET", "HEAD"])
-def styles_css() -> FileResponse:
-    return FileResponse(WEB_DIR / "styles.css", media_type="text/css")
-
-
-@app.api_route("/health", methods=["GET", "HEAD"])
-def health() -> dict:
-    return {"ok": True}
-
-
-# ----------------------------------------------------------------- api routes
-@app.get("/api/config")
-def api_config() -> dict:
-    return {
-        "download_dir": str(cfg.download_dir),
-        "extractor": extractor.name,
-        "has_ffmpeg": bool(shutil.which("ffmpeg")),
-        "concurrency": cfg.concurrency,
-        "allowed_hosts": list(cfg.allowed_hosts),
-    }
-
-
-@app.post("/api/inspect")
-async def api_inspect(req: InspectRequest) -> JSONResponse:
+async def _json_body(request: Request) -> dict:
     try:
-        info = await manager.inspect(req.url.strip(), req.quality, req.refresh)
+        data = await request.json()
+    except Exception:
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def _file(path: Path, media: str | None = None) -> FileResponse:
+    kwargs = {}
+    if media:
+        kwargs["media_type"] = media
+    return FileResponse(path, **kwargs)
+
+
+async def index(request: Request) -> FileResponse:
+    return _file(WEB_DIR / "index.html")
+
+
+async def app_js(request: Request) -> FileResponse:
+    return _file(WEB_DIR / "app.js", "application/javascript")
+
+
+async def styles_css(request: Request) -> FileResponse:
+    return _file(WEB_DIR / "styles.css", "text/css")
+
+
+async def health(request: Request) -> JSONResponse:
+    return JSONResponse({"ok": True})
+
+
+async def api_config(request: Request) -> JSONResponse:
+    return JSONResponse(
+        {
+            "download_dir": str(cfg.download_dir),
+            "extractor": extractor.name,
+            "has_ffmpeg": bool(shutil.which("ffmpeg")),
+            "concurrency": cfg.concurrency,
+            "allowed_hosts": list(cfg.allowed_hosts),
+        }
+    )
+
+
+async def api_inspect(request: Request) -> JSONResponse:
+    body = await _json_body(request)
+    url = str(body.get("url") or "").strip()
+    quality = str(body.get("quality") or "auto")
+    refresh = bool(body.get("refresh"))
+    if len(url) < 4:
+        return JSONResponse({"ok": False, "error": "paste a link first"}, status_code=422)
+    try:
+        info = await manager.inspect(url, quality, refresh)
     except ExtractorError as exc:
         return JSONResponse({"ok": False, "error": str(exc)}, status_code=422)
     except Exception as exc:  # noqa: BLE001
-        return JSONResponse({"ok": False, "error": f"{type(exc).__name__}: {exc}"}, status_code=500)
+        return JSONResponse(
+            {"ok": False, "error": f"{type(exc).__name__}: {exc}"}, status_code=500
+        )
     return JSONResponse({"ok": True, **info.to_dict()})
 
 
-@app.post("/api/diagnose")
-async def api_diagnose(req: UrlRequest) -> JSONResponse:
+async def api_diagnose(request: Request) -> JSONResponse:
+    body = await _json_body(request)
+    url = str(body.get("url") or "").strip()
+    if len(url) < 4:
+        return JSONResponse({"ok": False, "error": "paste a link first"}, status_code=422)
     try:
-        data = await manager.diagnose(req.url.strip())
+        data = await manager.diagnose(url)
     except Exception as exc:  # noqa: BLE001
-        return JSONResponse({"ok": False, "error": f"{type(exc).__name__}: {exc}"}, status_code=500)
+        return JSONResponse(
+            {"ok": False, "error": f"{type(exc).__name__}: {exc}"}, status_code=500
+        )
     return JSONResponse({"ok": True, "dump": data})
 
 
-@app.post("/api/download")
-async def api_download(req: DownloadRequest) -> JSONResponse:
-    job = manager.create(req.url.strip(), req.item_index, req.quality)
+async def api_download(request: Request) -> JSONResponse:
+    body = await _json_body(request)
+    url = str(body.get("url") or "").strip()
+    if len(url) < 4:
+        return JSONResponse({"ok": False, "error": "paste a link first"}, status_code=422)
+    item_index = body.get("item_index")
+    if item_index is not None:
+        try:
+            item_index = int(item_index)
+        except (TypeError, ValueError):
+            item_index = None
+    quality = str(body.get("quality") or "auto")
+    job = manager.create(url, item_index, quality)
     return JSONResponse({"ok": True, "job": job.to_dict()})
 
 
-@app.get("/api/jobs")
-def api_jobs() -> dict:
-    return {"jobs": manager.list_jobs()}
+async def api_jobs(request: Request) -> JSONResponse:
+    return JSONResponse({"jobs": manager.list_jobs()})
 
 
-@app.get("/api/events")
-async def api_events() -> StreamingResponse:
-    """Server-sent stream of job states (a snapshot twice a second)."""
-
+async def api_events(request: Request) -> StreamingResponse:
     async def gen():
         last = ""
         while True:
@@ -143,36 +152,69 @@ async def api_events() -> StreamingResponse:
     )
 
 
-@app.post("/api/jobs/{job_id}/cancel")
-def api_cancel(job_id: str) -> dict:
+async def api_cancel(request: Request) -> JSONResponse:
+    job_id = request.path_params["job_id"]
     if not manager.cancel(job_id):
-        raise HTTPException(404, "job not found")
-    return {"ok": True}
+        return JSONResponse({"ok": False, "error": "job not found"}, status_code=404)
+    return JSONResponse({"ok": True})
 
 
-@app.delete("/api/jobs/{job_id}")
-def api_delete(job_id: str) -> dict:
+async def api_delete(request: Request) -> JSONResponse:
+    job_id = request.path_params["job_id"]
     job = manager.jobs.pop(job_id, None)
     if not job:
-        raise HTTPException(404, "job not found")
+        return JSONResponse({"ok": False, "error": "job not found"}, status_code=404)
     manager.cancel(job_id)
-    return {"ok": True}
+    return JSONResponse({"ok": True})
 
 
-@app.get("/api/jobs/{job_id}/file")
-def api_file(job_id: str) -> FileResponse:
-    """Stream a finished download to the browser so it saves to your device."""
+async def api_file(request: Request) -> FileResponse | JSONResponse:
+    job_id = request.path_params["job_id"]
     job = manager.get(job_id)
     if not job or not job.path or job.status != "done":
-        raise HTTPException(404, "no finished file for this job")
+        return JSONResponse(
+            {"ok": False, "error": "no finished file for this job"}, status_code=404
+        )
 
     path = Path(job.path).resolve()
     root = cfg.download_dir.resolve()
     if root != path.parent and root not in path.parents:
-        raise HTTPException(400, "refusing to serve a file outside the download folder")
-
+        return JSONResponse(
+            {"ok": False, "error": "refusing to serve a file outside the download folder"},
+            status_code=400,
+        )
     if not path.exists():
-        raise HTTPException(404, "file is missing from disk")
+        return JSONResponse({"ok": False, "error": "file is missing from disk"}, status_code=404)
 
     media = "video/mp4" if path.suffix.lower() == ".mp4" else "video/mp2t"
     return FileResponse(path, filename=path.name, media_type=media)
+
+
+routes = [
+    Route("/", index, methods=["GET", "HEAD"]),
+    Route("/app.js", app_js, methods=["GET", "HEAD"]),
+    Route("/styles.css", styles_css, methods=["GET", "HEAD"]),
+    Route("/health", health, methods=["GET", "HEAD"]),
+    Route("/api/config", api_config, methods=["GET", "HEAD"]),
+    Route("/api/inspect", api_inspect, methods=["POST"]),
+    Route("/api/diagnose", api_diagnose, methods=["POST"]),
+    Route("/api/download", api_download, methods=["POST"]),
+    Route("/api/jobs", api_jobs, methods=["GET"]),
+    Route("/api/events", api_events, methods=["GET"]),
+    Route("/api/jobs/{job_id}/cancel", api_cancel, methods=["POST"]),
+    Route("/api/jobs/{job_id}", api_delete, methods=["DELETE"]),
+    Route("/api/jobs/{job_id}/file", api_file, methods=["GET", "HEAD"]),
+]
+
+app = Starlette(
+    routes=routes,
+    middleware=[
+        Middleware(
+            CORSMiddleware,
+            allow_origins=["*"],
+            allow_methods=["*"],
+            allow_headers=["*"],
+        ),
+        Middleware(PreviewMiddleware),
+    ],
+)
