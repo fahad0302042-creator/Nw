@@ -37,6 +37,13 @@ class NormalizeTests(unittest.TestCase):
         _, surl = extractor().normalize("https://diskwala.com/video/clip-id-42")
         self.assertEqual(surl, "clip-id-42")
 
+    def test_app_hex_id(self):
+        host, surl = extractor().normalize(
+            "https://www.diskwala.com/app/6a95c4bb06ba7ea03d8c69d4"
+        )
+        self.assertEqual(host, "www.diskwala.com")
+        self.assertEqual(surl, "6a95c4bb06ba7ea03d8c69d4")
+
     def test_rejects_unknown_host(self):
         with self.assertRaises(ExtractorError):
             extractor().normalize("https://example.com/s/abc")

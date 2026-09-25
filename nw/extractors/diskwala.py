@@ -63,6 +63,55 @@ M3U8_SCAN = re.compile(r"https?://[^\"'\\\s]+?\.m3u8[^\"'\\\s]*")
 DLINK_SCAN = re.compile(r'"dlink"\s*:\s*"([^"]+)"')
 
 VIDEO_EXT = (".mp4", ".mkv", ".webm", ".mov", ".m4v", ".avi", ".flv", ".ts")
+FILE_ID_RE = re.compile(r"[a-fA-F0-9]{24}")
+
+# DiskWala's website is a React SPA. File bytes come from api.diskwala.com
+# (Express). GET routes 404 with "Cannot GET"; the app uses POST.
+API_BASE = "https://api.diskwala.com"
+API_POST_PATHS = (
+    "/file",
+    "/files",
+    "/getFile",
+    "/get-file",
+    "/file/get",
+    "/files/get",
+    "/file/info",
+    "/fileInfo",
+    "/info",
+    "/details",
+    "/open",
+    "/resolve",
+    "/extract",
+    "/download",
+    "/url",
+    "/get",
+    "/v1/file",
+    "/v1/files",
+    "/v1/getFile",
+    "/api/file",
+    "/api/getFile",
+    "/app/file",
+    "/public/file",
+    "/link/info",
+    "/videos",
+    "/video",
+    "/content",
+    "/media",
+    "/item",
+    "/watch",
+    "/play",
+    "/stream",
+    "/signedUrl",
+    "/signed-url",
+    "/presign",
+)
+URL_KEYS = (
+    "url", "download_url", "downloadUrl", "downloadurl", "direct_url",
+    "direct_link", "download_link", "dlink", "cdn_url", "cdnUrl", "link",
+    "src", "file_url", "fileUrl", "stream_url", "streamUrl", "hls", "m3u8",
+)
+NAME_KEYS = ("name", "filename", "file_name", "fileName", "title", "server_filename")
+SIZE_KEYS = ("size", "file_size", "fileSize", "bytes", "length")
 
 
 class DiskwalaExtractor:
@@ -114,9 +163,14 @@ class DiskwalaExtractor:
                 return host, qs[key][0]
 
         parts = [p for p in parsed.path.split("/") if p]
-        # /s/<id>  /share/<id>  /sharing/link/<id>  /video/<id>  /f/<id>
-        if len(parts) >= 2 and parts[0] in {"s", "share", "sharing", "video", "f", "d"}:
+        # /app/<24-hex> is DiskWala's consumer link. /s/ is TeraBox-style.
+        if len(parts) >= 2 and parts[0] in {
+            "s", "share", "sharing", "video", "f", "d", "app", "playlist", "creator",
+        }:
             return host, parts[-1]
+        hex_id = FILE_ID_RE.search(url)
+        if hex_id:
+            return host, hex_id.group(0)
         if parts:
             return host, parts[-1]
         raise ExtractorError(f"Could not find a share id in {url!r}")
@@ -261,11 +315,130 @@ class DiskwalaExtractor:
                 f"https://{host}/share/streaming?{urlencode(params)}"
             )
 
+    def _json_headers(self) -> dict[str, str]:
+        return {
+            "User-Agent": self.cfg.user_agent,
+            "Accept": "application/json, text/plain, */*",
+            "Content-Type": "application/json",
+            "Origin": "https://www.diskwala.com",
+            "Referer": "https://www.diskwala.com/",
+        }
+
+    def _parse_json_response(self, r: httpx.Response) -> Any | None:
+        ctype = (r.headers.get("content-type") or "").lower()
+        text = r.text or ""
+        if "text/html" in ctype or text.lstrip()[:15].lower().startswith("<!doctype"):
+            return None
+        if text.strip().startswith("Cannot GET") or text.strip().startswith("Cannot POST"):
+            return None
+        try:
+            return r.json()
+        except ValueError:
+            return None
+
+    def _items_from_any_json(self, data: Any) -> list[MediaItem]:
+        items: list[MediaItem] = []
+
+        def walk(obj: Any) -> None:
+            if isinstance(obj, list):
+                for x in obj:
+                    walk(x)
+                return
+            if not isinstance(obj, dict):
+                return
+            name = next((str(obj[k]) for k in NAME_KEYS if obj.get(k)), "")
+            size = 0
+            for k in SIZE_KEYS:
+                if obj.get(k) is not None:
+                    try:
+                        size = int(obj[k])
+                        break
+                    except (TypeError, ValueError):
+                        pass
+            direct = None
+            stream = None
+            for k in URL_KEYS:
+                val = obj.get(k)
+                if isinstance(val, str) and val.startswith("http"):
+                    if ".m3u8" in val.lower() or k.lower() in {"hls", "m3u8", "stream_url", "streamurl"}:
+                        stream = stream or val
+                    else:
+                        direct = direct or val
+            if direct or stream:
+                fname = name or "file"
+                items.append(
+                    MediaItem(
+                        fs_id=str(obj.get("_id") or obj.get("id") or obj.get("fs_id") or ""),
+                        name=fname,
+                        size=size,
+                        is_video=fname.lower().endswith(VIDEO_EXT) or bool(stream),
+                        direct_url=direct,
+                        stream_url=stream,
+                        thumb=obj.get("thumbnail") or obj.get("thumb") or obj.get("poster"),
+                        raw=obj if isinstance(obj, dict) else {},
+                    )
+                )
+                return
+            for v in obj.values():
+                if isinstance(v, (dict, list)):
+                    walk(v)
+
+        walk(data)
+        return items
+
+    def _probe_diskwala_api(
+        self, client: httpx.Client, url: str, file_id: str
+    ) -> tuple[list[MediaItem], str, dict[str, Any]]:
+        """POST likely Express routes on api.diskwala.com until one returns file JSON."""
+        headers = self._json_headers()
+        bodies = (
+            {"id": file_id},
+            {"fileId": file_id},
+            {"file_id": file_id},
+            {"_id": file_id},
+            {"url": url},
+            {"link": url},
+        )
+        attempts: list[dict[str, Any]] = []
+        for path in API_POST_PATHS:
+            endpoint = API_BASE + path
+            for body in bodies:
+                try:
+                    r = client.post(endpoint, json=body, headers=headers)
+                except httpx.HTTPError as exc:
+                    attempts.append({"path": path, "error": str(exc)})
+                    continue
+                parsed = self._parse_json_response(r)
+                snippet = (r.text or "")[:180]
+                attempts.append(
+                    {
+                        "path": path,
+                        "body_keys": list(body),
+                        "status": r.status_code,
+                        "ctype": r.headers.get("content-type"),
+                        "head": snippet,
+                    }
+                )
+                if snippet.startswith("Cannot "):
+                    break  # this path does not exist; don't spam extra bodies
+                if parsed is None:
+                    continue
+                items = self._items_from_any_json(parsed)
+                if items:
+                    return items, f"api.diskwala.com POST {path}", {
+                        "api_path": path,
+                        "api_status": r.status_code,
+                        "attempts": attempts[-8:],
+                    }
+        return [], "", {"attempts": attempts[:40]}
+
     # ----------------------------------------------------------------- public
     def inspect(self, url: str, quality: str = "auto") -> LinkInfo:
         host, surl = self.normalize(url)
         base = f"https://{host}"
-        page_url = f"{base}/sharing/link?surl={surl}" if surl else url
+        page_url = url if "diskwala" in host else (
+            f"{base}/sharing/link?surl={surl}" if surl else url
+        )
 
         with self._client() as client:
             r = client.get(page_url, headers=self._headers())
@@ -294,6 +467,16 @@ class DiskwalaExtractor:
                 k: (v[:12] + "..." if len(v) > 24 else v) for k, v in tokens.items()
             }
 
+            if "diskwala" in host:
+                items, strategy, raw = self._probe_diskwala_api(client, url, surl)
+                info.raw.update(raw)
+                if items:
+                    info.strategy = strategy
+                    info.items = items
+                    if not info.title:
+                        info.title = items[0].name
+                    return info
+
             # --- Strategy 1/2: the two common listing endpoints ---------------
             payload = None
             for path in ("/share/list", "/api/shorturlinfo"):
@@ -312,7 +495,7 @@ class DiskwalaExtractor:
                     client=client,
                     base=base,
                     path=path,
-                    params=self._listing_params(host, surl, tokens, surl=surl),
+                    params=self._listing_params(host, surl, tokens, shorturl=surl),
                     referer=final_url,
                 )
                 if payload:
@@ -391,6 +574,13 @@ class DiskwalaExtractor:
 
                 tokens = self._extract_tokens(html)
                 out["tokens"] = tokens
+
+                if "diskwala" in host:
+                    _items, strategy, raw = self._probe_diskwala_api(client, url, surl)
+                    out["api_strategy"] = strategy or "none"
+                    out["api_probe"] = raw
+                    if _items:
+                        out["api_items"] = [i.to_dict() for i in _items]
 
                 for path in ("/share/list", "/api/shorturlinfo"):
                     params = self._listing_params(host, surl, tokens)

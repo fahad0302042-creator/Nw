@@ -11,6 +11,7 @@ DEFAULT_ALLOWED_HOSTS = (
     "www.diskwala.com",
     "diskwala.app",
     "www.diskwala.app",
+    "api.diskwala.com",
     "terabox.com",
     "www.terabox.com",
     "teraboxapp.com",
