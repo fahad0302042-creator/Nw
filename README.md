@@ -21,7 +21,7 @@ pkg update
 pkg install python git
 git clone -b arena/01a0d6a6-nw https://github.com/fahad0302042-creator/Nw.git
 cd Nw
-pip install -r requirements.txt
+pip install fastapi uvicorn httpx m3u8 python-dotenv
 python run.py
 ```
 
