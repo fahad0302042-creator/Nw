@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# Secrets - never commit
+.env
+
+# Runtime output
+downloads/
+*.part
+*.ts.tmp
+.nw/
+
+# OS
+.DS_Store
+Thumbs.db

@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#0e1014" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<title>Nw — DiskWala downloader</title>
+<link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+<header class="top">
+  <div class="brand"><span class="dot"></span> Nw</div>
+  <div class="meta" id="meta">loading…</div>
+</header>
+
+<main>
+  <section class="card">
+    <h2>1 · Paste a link</h2>
+    <form id="inspect-form" autocomplete="off">
+      <div class="row">
+        <input id="url" type="url" inputmode="url" enterkeyhint="go"
+               placeholder="Paste a DiskWala link" spellcheck="false" autocapitalize="off" />
+        <button type="button" id="paste-btn" class="ghost">Paste</button>
+      </div>
+      <div class="row actions-row">
+        <select id="quality" title="Stream quality">
+          <option value="auto">Best available</option>
+          <option value="1080">1080p</option>
+          <option value="720">720p</option>
+          <option value="480">480p</option>
+          <option value="360">360p</option>
+          <option value="direct">Original file (no HLS)</option>
+        </select>
+        <button type="submit" id="inspect-btn">Inspect</button>
+      </div>
+    </form>
+    <p class="hint" id="inspect-hint">
+      Inspect reads the link and lists what's behind it — nothing is downloaded yet.
+    </p>
+  </section>
+
+  <section class="card" id="results-card" hidden>
+    <h2>2 · Choose a file</h2>
+    <div id="results" class="results"></div>
+  </section>
+
+  <section class="card" id="jobs-card" hidden>
+    <h2>3 · Downloads</h2>
+    <div id="jobs" class="jobs"></div>
+  </section>
+
+  <section class="card">
+    <h2>Diagnostics</h2>
+    <p class="hint">
+      If a link won't resolve, run this and send the output — it shows exactly what the
+      host returned, without any file contents.
+    </p>
+    <div class="row">
+      <button type="button" id="diag-btn" class="ghost">Dump raw response</button>
+      <button type="button" id="copy-btn" class="ghost" hidden>Copy to clipboard</button>
+    </div>
+    <pre id="diag" class="diag" hidden></pre>
+  </section>
+</main>
+
+<div id="toast" class="toast" hidden></div>
+
+<script src="/app.js"></script>
+</body>
+</html>
