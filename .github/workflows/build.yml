@@ -6,6 +6,10 @@ on:
       - '**'
   workflow_dispatch:
 
+permissions:
+  contents: read
+  checks: write
+
 concurrency:
   group: build-${{ github.ref }}
   cancel-in-progress: true
@@ -31,15 +35,34 @@ jobs:
         uses: gradle/actions/setup-gradle@94baf225fe0a508e581a564467443d0e2379123b # v4.3.0
 
       - name: Build release APK (signed with repo keystore)
-        run: ./gradlew assembleRelease
+        run: |
+          ./gradlew assembleRelease --stacktrace 2>&1 | tee build.log
+          exit ${PIPESTATUS[0]}
+
+      - name: Report build errors
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tail -c 55000 build.log > /tmp/tail.txt
+          gh api --method POST "repos/${{ github.repository }}/check-runs" \
+            -f name="build-errors" \
+            -f head_sha="${{ github.sha }}" \
+            -f status="completed" \
+            -f conclusion="failure" \
+            -f 'output[title]=Gradle build failed — tail of build.log' \
+            -f 'output[summary]=Automated error report so failures are readable without log download.' \
+            -f 'output[text]=$(head -c 55000 /tmp/tail.txt)'
 
       - name: Collect APKs
+        if: success()
         run: |
           cd app/build/outputs/apk/release
           mv app-universal-release.apk Nw-universal.apk
           mv app-arm64-v8a-release.apk Nw-arm64-v8a.apk
 
       - name: Upload APK
+        if: success()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: Nw-APK-${{ github.sha }}
