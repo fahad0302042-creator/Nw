@@ -74,7 +74,7 @@ dynamic _extractHtmlField(
   value ??= spec.fallback;
   if (value != null && spec.regex != null) {
     final match = RegExp(spec.regex!, dotAll: true).firstMatch(value);
-    value = match != null ? match.group(spec.regexGroup) : null;
+    value = match?.group(spec.regexGroup);
   }
   if (value != null && spec.absolute) {
     value = resolveUrl(value, baseUrl);
@@ -109,7 +109,7 @@ dynamic _extractJsonField(
   String? value = resolveJsonPathAsString(itemRoot, spec.path) ?? spec.fallback;
   if (value != null && spec.regex != null) {
     final match = RegExp(spec.regex!, dotAll: true).firstMatch(value);
-    value = match != null ? match.group(spec.regexGroup) : null;
+    value = match?.group(spec.regexGroup);
   }
   if (value != null && spec.absolute) {
     value = resolveUrl(value, baseUrl);

@@ -56,7 +56,7 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
   }
 
   Future<void> _play(PageEntry link) async {
-    await _chewieController?.dispose();
+    _chewieController?.dispose();
     await _videoController?.dispose();
     final videoController = VideoPlayerController.networkUrl(
       Uri.parse(link.url),

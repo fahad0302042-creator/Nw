@@ -54,6 +54,7 @@ class PagesEndpoint {
     this.itemPath,
     this.regex,
     this.regexGroup = 1,
+    this.staticItems,
     this.resolveUrl,
     this.resolveResponseType = 'json',
     this.vars,

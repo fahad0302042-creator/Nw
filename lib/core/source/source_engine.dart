@@ -166,7 +166,7 @@ class SourceEngine {
     return MangaDetail(
       item: CatalogItem(
         url: item.url,
-        title: title ?? item.title,
+        title: title,
         cover: cover,
         subtitle: item.subtitle,
         sourceId: ext.id,

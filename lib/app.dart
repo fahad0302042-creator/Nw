@@ -7,7 +7,7 @@ class TsundokuApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final seed = const Color(0xFFE8623C);
+    const seed = Color(0xFFE8623C);
     return MaterialApp(
       title: 'Tsundoku',
       debugShowCheckedModeBanner: false,
