@@ -26,10 +26,20 @@ dynamic resolveJsonPath(dynamic root, String? path) {
       final key = parts.first;
       final value = parts.sublist(1).join('=');
       if (current is List) {
-        current = current.firstWhere(
-          (e) => e is Map && '${e[key]}' == value,
-          orElse: () => null,
-        );
+        // A manual loop (rather than `Iterable.firstWhere(orElse: ...)`) is
+        // used deliberately: when `current` is a concrete `List<Map<String,
+        // Object>>` (as real decoded JSON often is), `firstWhere`'s generic
+        // `orElse` must return that same non-nullable element type, so
+        // `orElse: () => null` throws a runtime type error. Plain dynamic
+        // iteration sidesteps generics entirely.
+        dynamic found;
+        for (final element in current) {
+          if (element is Map && '${element[key]}' == value) {
+            found = element;
+            break;
+          }
+        }
+        current = found;
       } else {
         return null;
       }
