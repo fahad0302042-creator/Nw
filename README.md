@@ -92,6 +92,22 @@ exercise every path in the app.
 
 ---
 
+## A word on Keiyoushi / Aniyomi extensions
+
+**They cannot work here, and never will.** Those extensions ship as Android
+APKs containing compiled JVM classes, loaded through Android's
+`PathClassLoader`. Flutter has no equivalent — this is a hard platform
+limitation, not a missing feature.
+
+Pasting a Keiyoushi repository URL now gives a clear explanation rather than
+silently importing hundreds of entries that fail on install.
+
+Kurayomi therefore defines its own **JavaScript** extension format, shaped
+deliberately close to the Tachiyomi API so porting a source is mostly a
+mechanical rewrite. See [docs/EXTENSIONS.md](docs/EXTENSIONS.md).
+
+---
+
 ## Downloads
 
 Tap the download icon on any chapter or episode, or use **Download next

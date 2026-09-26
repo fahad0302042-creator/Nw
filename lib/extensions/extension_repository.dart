@@ -46,7 +46,12 @@ class ExtensionRepository {
   Future<RepoIndex> fetchIndex(String rawUrl) async {
     final indexUrl = RepoUrl.normalize(rawUrl);
     final body = await _fetchText(indexUrl, what: 'repository index');
+    return parseIndex(body, indexUrl);
+  }
 
+  /// Parses an index body. Static and separate from I/O so the awkward
+  /// real-world shapes below can be tested directly.
+  static RepoIndex parseIndex(String body, String indexUrl) {
     final Object? decoded;
     try {
       decoded = jsonDecode(body);
@@ -54,16 +59,16 @@ class ExtensionRepository {
       throw RepoException(_describeNonJson(body, indexUrl, e));
     }
 
-    final base = Uri.parse(indexUrl);
-    String abs(String? u) =>
-        (u == null || u.isEmpty) ? '' : base.resolve(u).toString();
-
     if (decoded is! Map && decoded is! List) {
       throw RepoException(
         'That URL returned JSON, but not a repository index — expected an '
         'object with an "extensions" list.',
       );
     }
+
+    final base = Uri.parse(indexUrl);
+    String abs(String? u) =>
+        (u == null || u.isEmpty) ? '' : base.resolve(u).toString();
 
     final Map<String, dynamic> map = decoded is List
         ? {'name': base.host, 'extensions': decoded}
@@ -76,23 +81,71 @@ class ExtensionRepository {
       );
     }
 
-    final exts = (map['extensions'] as List? ?? const [])
-        .map((e) {
-          final j = (e as Map).cast<String, dynamic>();
+    final raw = (map['extensions'] as List)
+        .whereType<Map>()
+        .map((e) => e.cast<String, dynamic>())
+        .toList();
+
+    // Refuse a Mihon/Tachiyomi/Keiyoushi repository loudly. Its entries
+    // carry an "apk" and an integer "code" version, so silently importing
+    // them would produce hundreds of extensions that all fail on install.
+    if (_looksLikeApkRepo(raw)) {
+      throw RepoException(
+        'This is a Mihon / Tachiyomi extension repository '
+        '(${raw.length} entries).\n\n'
+        'Those extensions are compiled Android APKs containing JVM classes. '
+        'Flutter has no way to load them, so they cannot work in Kurayomi — '
+        'this is a hard limitation, not a missing feature.\n\n'
+        'Kurayomi uses its own JavaScript extension format, shaped closely '
+        'after the Tachiyomi API so porting a source is mostly mechanical. '
+        'See docs/EXTENSIONS.md, or try the bundled demo repository first.',
+      );
+    }
+
+    final exts = raw
+        .map((j) {
+          // "code" must be a path to a .js bundle. An APK-style repo puts an
+          // integer version code here, which would otherwise resolve into a
+          // plausible but useless URL.
+          final codeValue = j['code'] ?? j['codeUrl'];
+          final codePath = codeValue is String ? codeValue : '';
           return ExtensionInfo.fromJson({
             ...j,
-            'code': abs('${j['code'] ?? j['codeUrl'] ?? ''}'),
+            'code': abs(codePath),
             'icon': j['icon'] == null ? null : abs('${j['icon']}'),
           }, repoUrl: indexUrl);
         })
         .where((e) => e.codeUrl.isNotEmpty)
         .toList();
 
+    if (exts.isEmpty && raw.isNotEmpty) {
+      throw RepoException(
+        'Found ${raw.length} entries, but none had a JavaScript "code" path.'
+        '\n\nEach entry needs a "code" field pointing at its .js bundle, '
+        'relative to this index.',
+      );
+    }
+
     return RepoIndex(
       url: indexUrl,
       name: '${map['name'] ?? base.host}',
       extensions: exts,
     );
+  }
+
+  /// Heuristic for the Tachiyomi/Mihon repository format.
+  static bool _looksLikeApkRepo(List<Map<String, dynamic>> entries) {
+    if (entries.isEmpty) return false;
+    final sample = entries.take(10);
+    final apkish = sample
+        .where((e) =>
+            e.containsKey('apk') ||
+            e.containsKey('pkg') ||
+            e.containsKey('sources') ||
+            // Their "code" is the integer version code.
+            e['code'] is num)
+        .length;
+    return apkish >= (sample.length / 2).ceil();
   }
 
   Future<String> fetchCode(String codeUrl) async {
