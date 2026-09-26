@@ -36,9 +36,11 @@ class DownloadStorage {
   /// Makes an arbitrary title safe for every filesystem Android might use
   /// (including FAT32 on removable storage, which is the strictest).
   static String sanitize(String input) {
+    // Order matters: collapse whitespace first, otherwise a newline is a
+    // control character and becomes '_' instead of folding into a space.
     var s = input
-        .replaceAll(RegExp(r'[<>:"/\\|?*\x00-\x1F]'), '_')
         .replaceAll(RegExp(r'\s+'), ' ')
+        .replaceAll(RegExp(r'[<>:"/\\|?*\x00-\x1F]'), '_')
         .trim();
 
     // Trailing dots and spaces are silently dropped by some filesystems,
