@@ -46,10 +46,32 @@ jobs:
         continue-on-error: true
 
       - name: Analyze
-        run: flutter analyze
+        run: |
+          set +e
+          flutter analyze > /tmp/analyze_output.txt 2>&1
+          code=$?
+          cat /tmp/analyze_output.txt
+          if [ $code -ne 0 ]; then
+            while IFS= read -r line; do
+              esc=$(printf '%s' "$line" | sed 's/%/%25/g')
+              echo "::error::${esc}"
+            done < /tmp/analyze_output.txt
+          fi
+          exit $code
 
       - name: Run tests
-        run: flutter test
+        run: |
+          set +e
+          flutter test > /tmp/test_output.txt 2>&1
+          code=$?
+          cat /tmp/test_output.txt
+          if [ $code -ne 0 ]; then
+            tail -n 200 /tmp/test_output.txt | while IFS= read -r line; do
+              esc=$(printf '%s' "$line" | sed 's/%/%25/g')
+              echo "::error::${esc}"
+            done
+          fi
+          exit $code
 
       - name: Generate Gradle wrapper
         working-directory: android
