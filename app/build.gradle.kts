@@ -1,3 +1,5 @@
+import java.util.Properties
+
 import mihon.buildlogic.Config
 import mihon.buildlogic.getBuildTime
 import mihon.buildlogic.getCommitCount
@@ -48,7 +50,7 @@ android {
         val keystoreFile = rootProject.file("keystore/nw-release.jks")
         val keystorePropertiesFile = rootProject.file("keystore/keystore.properties")
         if (keystoreFile.exists() && keystorePropertiesFile.exists()) {
-            val keystoreProperties = java.util.Properties().apply {
+            val keystoreProperties = Properties().apply {
                 keystorePropertiesFile.inputStream().use { load(it) }
             }
             create("nw") {
