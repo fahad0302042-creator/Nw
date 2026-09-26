@@ -24,6 +24,8 @@ clean light surfaces, iOS system palette, big rounded corners, left navigation r
 | **Home tab (new)** | `ui/feed/FeedTab.kt`, `ui/feed/FeedScreenModel.kt`, `presentation/feed/FeedScreen.kt`, `domain/ui/model/NavStyle.kt`, `domain/ui/model/StartScreen.kt` | "Continue Watching" (from history) + "New Episodes" (from updates, last 30 days) horizontal cards. Read-only: reuses `GetAnimeHistory` / `GetAnimeUpdates`, creates no new data. Default start screen for fresh installs. |
 | **App renamed to "Nw"** | `i18n/.../base/strings.xml` (`app_name`) | |
 | **Own app identity** | `app/build.gradle.kts` | `applicationId = io.github.fahad0302042.nw` (installs alongside the real Aniyomi), `versionCode = getCommitCount()` (auto-bumps), `versionName = 1.0.0`. |
+| **Inter font app-wide** | `presentation/theme/NwTypography.kt`, `res/font/*.ttf`, `TachiyomiTheme.kt` | SF Pro-like type on every screen (OFL license in `licenses/inter-OFL.txt`). |
+| **Settings hub redesign** | `presentation/more/MoreScreen.kt`, `LogoHeader.kt` | iOS-style grouped inset cards with inset dividers; More tab now shows the Nw play glyph instead of the Aniyomi paper plane. |
 | **New logo** | `res/drawable/ic_launcher_background.xml`, `res/drawable/ic_launcher_foreground.xml`, `res/mipmap/ic_launcher.xml`, `res/mipmap/ic_launcher_round.xml` | Blue gradient + white play glyph. Foreground doubles as the themed/monochrome icon. |
 | **Stable release signing** | `app/build.gradle.kts`, `keystore/` | See "Signing" below. |
 | **Fork CI** | `.github/workflows/build.yml` | Builds a signed release APK on every push. Upstream's `build_push.yml` / `build_pull_request.yml` and `FUNDING.yml` were removed. |

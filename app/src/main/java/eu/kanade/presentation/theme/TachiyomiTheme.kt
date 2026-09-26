@@ -15,6 +15,7 @@ import androidx.compose.ui.unit.dp
 import eu.kanade.domain.ui.UiPreferences
 import eu.kanade.domain.ui.model.AppTheme
 import eu.kanade.presentation.theme.colorscheme.BaseColorScheme
+import eu.kanade.presentation.theme.NwTypography
 import eu.kanade.presentation.theme.colorscheme.CloudflareColorScheme
 import eu.kanade.presentation.theme.colorscheme.CottoncandyColorScheme
 import eu.kanade.presentation.theme.colorscheme.DoomColorScheme
@@ -68,6 +69,7 @@ private fun BaseTachiyomiTheme(
     MaterialTheme(
         colorScheme = getThemeColorScheme(appTheme, isAmoled),
         shapes = NwShapes,
+        typography = NwTypography,
         content = content,
     )
 }
