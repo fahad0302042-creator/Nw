@@ -71,6 +71,10 @@ git merge aniyomi/main
 If git complains about missing history, deepen first:
 `git fetch --deepen=100 aniyomi main`.
 
+**Pushing from this shallow clone:** if a push ever fails with
+`remote unpack failed: index-pack failed`, run `git fetch --unshallow aniyomi main`,
+push, then re-shallow with `git fetch --depth=50 aniyomi main && git gc --prune=now`.
+
 Your FORK_CHANGES.md is the map: if a conflict touches a file listed above,
 re-apply the intent (rail always on, NW default, FeedTab in list, own applicationId).
 
