@@ -1,0 +1,127 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Fast feedback: the JS side needs no SDK at all.
+  extensions:
+    name: Extension bundles
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Syntax-check every extension bundle
+        run: |
+          for f in extensions_repo/src/*/index.js; do
+            echo "checking $f"
+            node --check "$f"
+          done
+
+      - name: Validate repository index
+        run: |
+          python3 - <<'PY'
+          import json, pathlib, sys
+          idx = json.load(open('extensions_repo/index.json'))
+          assert idx.get('extensions'), 'no extensions listed'
+          bad = []
+          for e in idx['extensions']:
+              for key in ('id', 'name', 'version', 'lang', 'type', 'code'):
+                  if not e.get(key):
+                      bad.append(f"{e.get('id', '?')}: missing {key}")
+              if e.get('type') not in ('manga', 'anime'):
+                  bad.append(f"{e.get('id')}: bad type {e.get('type')}")
+              p = pathlib.Path('extensions_repo') / e.get('code', '')
+              if not p.exists():
+                  bad.append(f"{e.get('id')}: code missing at {p}")
+          if bad:
+              sys.exit('\n'.join(bad))
+          print(f"OK: {len(idx['extensions'])} extensions")
+          PY
+
+      - name: Check the JS prelude parses
+        run: |
+          python3 - <<'PY'
+          import re, pathlib
+          src = pathlib.Path('lib/extensions/js_prelude.dart').read_text()
+          m = re.search(r"const String kJsPrelude = r'''(.*?)''';", src, re.S)
+          assert m, 'could not extract kJsPrelude'
+          pathlib.Path('/tmp/prelude.js').write_text(m.group(1))
+          print(f'extracted {len(m.group(1))} chars')
+          PY
+          node --check /tmp/prelude.js
+
+      - name: Extension runtime contract test
+        run: node tool/test_runtime.js
+
+  flutter:
+    name: Analyze, test & build APK
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Flutter version
+        run: flutter --version
+
+      - name: Generate the Android platform folder
+        run: bash tool/bootstrap.sh
+        env:
+          ORG: com.kurayomi
+
+      - name: Confirm bootstrap restored our sources
+        run: |
+          grep -q 'KurayomiApp' lib/main.dart \
+            || { echo "::error::flutter create clobbered lib/main.dart"; exit 1; }
+          grep -q 'flutter_inappwebview' pubspec.yaml \
+            || { echo "::error::flutter create clobbered pubspec.yaml"; exit 1; }
+          grep -q 'android.permission.INTERNET' android/app/src/main/AndroidManifest.xml \
+            || { echo "::error::manifest was not patched"; exit 1; }
+          echo "bootstrap output verified"
+
+      - name: Analyze
+        id: analyze
+        run: flutter analyze --no-fatal-infos 2>&1 | tee analyze.log
+
+      - name: Unit tests
+        if: always()
+        run: flutter test --reporter expanded
+
+      - name: Build debug APK
+        if: always()
+        run: flutter build apk --debug
+
+      - name: Upload APK
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kurayomi-debug-apk
+          path: build/app/outputs/flutter-apk/*.apk
+          if-no-files-found: warn
+
+      - name: Upload analyzer log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: analyze-log
+          path: analyze.log
+          if-no-files-found: ignore
