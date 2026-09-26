@@ -12,6 +12,23 @@ That's it. Everything below is context and troubleshooting.
 
 ---
 
+## Verified build
+
+Every push is compiled on GitHub Actions. The last green run:
+
+| | |
+|---|---|
+| Flutter | 3.47.5 stable |
+| JDK | 17 |
+| AGP / Gradle | 8.11.1 / 8.14.3 (pinned by `tool/android_patch.py`) |
+| Result | analyze clean · 34 unit tests + 13 runtime tests pass · `app-debug.apk` built |
+
+The debug APK is attached to each successful run as the
+**`kurayomi-debug-apk`** artifact — you can download and install it without
+building anything locally.
+
+---
+
 ## Requirements
 
 | Thing | Version | Why |
@@ -127,6 +144,23 @@ source-specific.
 
 ## Troubleshooting
 
+### `getDefaultProguardFile('proguard-android.txt') is no longer supported`
+AGP 9 removed that API, but the released `flutter_inappwebview_android`
+still calls it. AGP 9 additionally enables the new DSL, which the current
+Flutter Gradle plugin cannot apply. `tool/android_patch.py` therefore pins
+AGP to **8.11.1** and Gradle to **8.14.3** whenever the Flutter template
+ships AGP 9+.
+
+You will see two "support will soon be dropped" warnings from Flutter about
+those pinned versions. They are warnings, not errors, and the build
+succeeds. Once `flutter_inappwebview` publishes the upstream fix, raise
+`AGP_PIN`/`GRADLE_PIN` in `tool/android_patch.py` and the warnings go away.
+
+### `Your project's Gradle version is lower than Flutter's minimum`
+The Gradle pin drifted below what your Flutter version requires. Raise
+`GRADLE_PIN` in `tool/android_patch.py` to the version Flutter names in the
+error, keeping `AGP_PIN` on the 8.x line.
+
 ### `Unsupported class file major version` / Gradle fails immediately
 You're on JDK 21+. AGP 8.x wants **JDK 17**.
 ```bash
@@ -177,6 +211,29 @@ Run `flutter analyze` and paste the output — the lint set in
 ## Project checks
 
 ```bash
-flutter analyze                                  # Dart
-node --check extensions_repo/src/*/index.js      # extension bundles
+flutter analyze                 # Dart
+flutter test                    # 34 unit tests
+node tool/test_runtime.js       # 13 JS runtime contract tests, no SDK needed
 ```
+
+`tool/test_runtime.js` executes the real prelude from
+`lib/extensions/js_prelude.dart` in Node against a stub of the Dart host, and
+drives both bundled demo extensions through the full
+`popular → details → chapters/episodes → pages/videos` pipeline. It runs in
+under a second and needs no Flutter SDK, so it is the fastest way to check
+you have not broken the extension API.
+
+---
+
+## CI
+
+`.github/workflows/ci.yml` runs on every push:
+
+- **Extension bundles** (~10s, no SDK) — syntax-checks every bundle and the
+  extracted prelude, validates `index.json`, runs the runtime contract tests.
+- **Analyze, test & build APK** (~5min) — runs `tool/bootstrap.sh`, asserts it
+  restored our sources and patched the manifest, then analyze + test + build.
+
+Because Action log archives live on blob storage that some networks cannot
+reach, every run also posts its full report as a **commit comment** and to
+the job summary.

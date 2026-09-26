@@ -9,6 +9,11 @@ repositories provide extensions. What you point it at is up to you.
 
 ---
 
+[![CI](https://github.com/fahad0302042-creator/Nw/actions/workflows/ci.yml/badge.svg?branch=arena/01a0dc0e-nw)](https://github.com/fahad0302042-creator/Nw/actions/workflows/ci.yml)
+
+Builds green on Flutter 3.47.5 / JDK 17. Every successful CI run attaches an
+installable **debug APK** as an artifact.
+
 ## Status
 
 | Area | State |
@@ -24,6 +29,7 @@ repositories provide extensions. What you point it at is up to you.
 | Cloudflare / DDoS-Guard / Sucuri bypass (WebView) | ✅ |
 | Headless JS rendering for client-side sites | ✅ |
 | OLED theming, 7 palettes, grid options | ✅ |
+| CI: analyze + 34 unit tests + 13 runtime tests + APK build | ✅ |
 | Downloads / offline | ⬜ planned |
 | Trackers (AniList, MAL) | ⬜ planned |
 | Backup & restore | ⬜ planned |
