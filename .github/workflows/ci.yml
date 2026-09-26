@@ -131,56 +131,62 @@ jobs:
         if: always()
         env:
           GH_TOKEN: ${{ github.token }}
+          A: ${{ steps.analyze.outcome }}
+          T: ${{ steps.tests.outcome }}
+          B: ${{ steps.apk.outcome }}
         run: |
-          set -u
-          A='${{ steps.analyze.outcome }}'
-          T='${{ steps.tests.outcome }}'
-          B='${{ steps.apk.outcome }}'
-
-          icon() { [ "$1" = success ] && echo ':white_check_mark:' || echo ':x:'; }
+          icon() { if [ "$1" = success ]; then echo ':white_check_mark:'; else echo ':x:'; fi; }
 
           {
             echo "## Kurayomi CI"
             echo
+            echo "commit \`${{ github.sha }}\`"
+            echo
             echo "| Step | Result |"
             echo "| --- | --- |"
-            echo "| Analyze | $(icon "$A") \`$A\` |"
-            echo "| Unit tests | $(icon "$T") \`$T\` |"
-            echo "| Debug APK | $(icon "$B") \`$B\` |"
+            printf '| Analyze | %s %s |\n'    "$(icon "$A")" "$A"
+            printf '| Unit tests | %s %s |\n' "$(icon "$T")" "$T"
+            printf '| Debug APK | %s %s |\n'  "$(icon "$B")" "$B"
             echo
           } > report.md
 
           for pair in "Analyze:analyze.log" "Unit tests:test.log" "Build:build.log"; do
-            name="${pair%%:*}"; file="${pair##*:}"
+            name="${pair%%:*}"
+            file="${pair##*:}"
             [ -f "$file" ] || continue
             {
-              echo "<details><summary>$name (last 250 lines)</summary>"
+              echo "<details><summary>$name (last 200 lines)</summary>"
               echo
               echo '```'
-              tail -n 250 "$file"
+              tail -n 200 "$file"
               echo '```'
               echo
-              echo "</details>"
+              echo '</details>'
               echo
             } >> report.md
           done
 
-          cat report.md >> "$GITHUB_STEP_SUMMARY"
+          cat report.md >> "$GITHUB_STEP_SUMMARY" || true
 
-          # Log artifacts live on blob storage, which some networks cannot
-          # reach. A commit comment is plain REST API, so the result is
-          # always readable.
-          if [ "$A" != success ] || [ "$T" != success ] || [ "$B" != success ]; then
-            gh api -X POST \
-              "repos/${{ github.repository }}/commits/${{ github.sha }}/comments" \
-              -f body@report.md >/dev/null && echo "posted failure report as a commit comment"
+          # Action log archives sit on blob storage that some networks cannot
+          # reach, so the result is mirrored to a commit comment over plain
+          # REST. Posted unconditionally: a green run is worth confirming too.
+          jq -Rs '{body: .}' report.md > payload.json
+          gh api -X POST \
+            "repos/${{ github.repository }}/commits/${{ github.sha }}/comments" \
+            --input payload.json >/dev/null \
+            && echo "report posted as a commit comment" \
+            || echo "could not post commit comment (continuing)"
+
+          if [ "$A" = success ] && [ "$T" = success ] && [ "$B" = success ]; then
+            echo "all green"
+          else
+            echo "::error::analyze=$A tests=$T apk=$B"
             exit 1
           fi
 
-          echo "all green"
-
       - name: Upload APK
-        if: steps.apk.outcome == 'success'
+        if: always() && steps.apk.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
           name: kurayomi-debug-apk
