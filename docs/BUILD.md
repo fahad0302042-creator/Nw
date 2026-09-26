@@ -21,7 +21,7 @@ Every push is compiled on GitHub Actions. The last green run:
 | Flutter | 3.47.5 stable |
 | JDK | 17 |
 | AGP / Gradle | 8.11.1 / 8.14.3 (pinned by `tool/android_patch.py`) |
-| Result | analyze clean · 59 unit tests + 13 runtime tests pass · `app-debug.apk` built |
+| Result | analyze clean · 78 unit tests + 13 runtime tests pass · `app-debug.apk` built |
 
 The debug APK is attached to each successful run as the
 **`kurayomi-debug-apk`** artifact — you can download and install it without
@@ -156,6 +156,11 @@ those pinned versions. They are warnings, not errors, and the build
 succeeds. Once `flutter_inappwebview` publishes the upstream fix, raise
 `AGP_PIN`/`GRADLE_PIN` in `tool/android_patch.py` and the warnings go away.
 
+### `Dependency ':flutter_local_notifications' requires core library desugaring`
+The notification plugin uses `java.time`, which needs desugaring below
+minSdk 26. `tool/android_patch.py` enables it automatically — re-run
+`bash tool/bootstrap.sh`, which reports what it changed.
+
 ### `Your project's Gradle version is lower than Flutter's minimum`
 The Gradle pin drifted below what your Flutter version requires. Raise
 `GRADLE_PIN` in `tool/android_patch.py` to the version Flutter names in the
@@ -212,7 +217,7 @@ Run `flutter analyze` and paste the output — the lint set in
 
 ```bash
 flutter analyze                 # Dart
-flutter test                    # 59 unit tests
+flutter test                    # 78 unit tests
 node tool/test_runtime.js       # 13 JS runtime contract tests, no SDK needed
 ```
 

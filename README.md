@@ -29,10 +29,12 @@ installable **debug APK** as an artifact.
 | Cloudflare / DDoS-Guard / Sucuri bypass (WebView) | ✅ |
 | Headless JS rendering for client-side sites | ✅ |
 | OLED theming, 7 palettes, grid options | ✅ |
-| CI: analyze + 59 unit tests + 13 runtime tests + APK build | ✅ |
+| CI: analyze + 78 unit tests + 13 runtime tests + APK build | ✅ |
 | Downloads: offline chapters & episodes | ✅ |
-| Trackers (AniList, MAL) | ⬜ planned |
-| Backup & restore | ⬜ planned |
+| Categories (many-to-many, reorderable) | ✅ |
+| Trackers: AniList + MyAnimeList, auto progress sync | ✅ |
+| Backup & restore (JSON, merge-based) | ✅ |
+| Library update checks + notifications | ✅ |
 
 ---
 
@@ -115,6 +117,57 @@ unplayable once offline.
 Once downloaded, the reader and player read straight from disk — no network,
 and not even a source lookup. Manage everything in **More → Downloads**:
 queue, progress, space used, and per-item deletion.
+
+---
+
+## Library, categories and updates
+
+Titles can sit in several categories at once (Mihon-style many-to-many), and
+the Library shows a chip strip to filter by one. Categories are reorderable.
+
+**Check for new chapters** from the Library toolbar walks your library
+sequentially with a short delay between titles — 200 series fetched in
+parallel looks like an attack, and the resulting ban hurts you, not the
+site. It runs the HTTP client in non-interactive mode so a background check
+can never pop a Cloudflare WebView in your face; challenged titles are
+skipped until you open them. New-chapter counts appear as a badge on covers,
+and a local notification summarises the run.
+
+---
+
+## Tracking
+
+Link titles to **AniList** or **MyAnimeList** and progress is pushed as you
+read.
+
+Both need a **client ID you register yourself** (More → Tracking explains
+where). That is deliberate: a client ID baked into open-source code can be
+impersonated by anyone, and both services tie rate limits and bans to it.
+
+- AniList uses the implicit grant — no client secret, which a public client
+  could not keep anyway.
+- MyAnimeList uses OAuth2 with PKCE, and refreshes its token silently.
+- Progress only ever moves **forwards**, so re-reading chapter 3 of a series
+  you finished cannot tell AniList you regressed.
+- Reaching the final chapter marks the entry completed.
+- A tracker failure never interrupts reading — it is logged, not thrown.
+
+---
+
+## Backup & restore
+
+**More → Backup & restore** writes one JSON file containing your library,
+read progress, categories, tracker links, repository URLs and the list of
+extensions you had.
+
+It deliberately excludes covers, downloaded chapters and cookies: they are
+re-fetchable or device-specific, and a multi-gigabyte backup is one nobody
+actually makes.
+
+Restoring **merges** — nothing is deleted. The file is validated before
+anything is touched, and extensions are **not** auto-installed, because that
+would mean silently downloading and executing code. Their repositories are
+restored so reinstalling is one tap.
 
 ---
 
