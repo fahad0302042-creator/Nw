@@ -6,6 +6,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/providers.dart';
 import '../../data/download/download_storage.dart';
 import '../../domain/models/download.dart';
+import '../../domain/models/track.dart';
+import '../categories/categories_page.dart';
+import '../track/track_sheet.dart';
 import '../../domain/models/media.dart';
 import '../../domain/source/media_source.dart';
 import '../common/widgets.dart';
@@ -32,6 +35,7 @@ class _DetailsPageState extends ConsumerState<DetailsPage> {
   bool _descExpanded = false;
   /// Unit names with a completed local copy, refreshed alongside the list.
   Set<String> _downloaded = {};
+  List<TrackLink> _tracks = const [];
 
   MediaSource? get _source => ref.read(sourceByIdProvider(_item.sourceId));
 
@@ -87,6 +91,9 @@ class _DetailsPageState extends ConsumerState<DetailsPage> {
         _loading = false;
       });
       unawaited(_refreshDownloaded());
+      unawaited(_refreshTracks());
+      // Clear the "new chapters" badge now the user has opened the title.
+      unawaited(db.clearNewCount(id));
     } catch (e) {
       if (mounted) {
         setState(() {
@@ -106,6 +113,13 @@ class _DetailsPageState extends ConsumerState<DetailsPage> {
           u.name,
     };
     if (mounted) setState(() => _downloaded = found);
+  }
+
+  Future<void> _refreshTracks() async {
+    final id = _item.id;
+    if (id == null) return;
+    final links = await ref.read(trackingServiceProvider).linksFor(id);
+    if (mounted) setState(() => _tracks = links);
   }
 
   Future<void> _downloadUnits(List<MediaUnit> units) async {
@@ -140,6 +154,19 @@ class _DetailsPageState extends ConsumerState<DetailsPage> {
     );
   }
 
+  /// Tell linked services how far the user has got. Failures are swallowed
+  /// inside the service — tracking must never interrupt reading.
+  Future<void> _syncTrackers(MediaUnit unit) async {
+    final id = _item.id;
+    if (id == null || unit.number < 0) return;
+    await ref.read(trackingServiceProvider).syncProgress(
+          itemId: id,
+          type: _item.type,
+          unitNumber: unit.number,
+        );
+    await _refreshTracks();
+  }
+
   void _open(MediaUnit unit) {
     final source = _source;
     if (source == null) return;
@@ -158,6 +185,11 @@ class _DetailsPageState extends ConsumerState<DetailsPage> {
       if (id != null) {
         final refreshed = await ref.read(databaseProvider).units(id);
         if (mounted) setState(() => _units = refreshed);
+        final finished = refreshed.firstWhere(
+          (u) => u.url == unit.url,
+          orElse: () => unit,
+        );
+        if (finished.read) await _syncTrackers(finished);
       }
     });
   }
@@ -282,6 +314,18 @@ class _DetailsPageState extends ConsumerState<DetailsPage> {
                 ],
               ),
               IconButton(
+                tooltip: 'Categories',
+                icon: const Icon(Icons.label_outline),
+                onPressed: _item.id == null
+                    ? null
+                    : () => showModalBottomSheet(
+                          context: context,
+                          isScrollControlled: true,
+                          builder: (_) =>
+                              CategoryPickerSheet(itemId: _item.id!),
+                        ),
+              ),
+              IconButton(
                 tooltip: 'Mark all read',
                 icon: const Icon(Icons.done_all),
                 onPressed: _item.id == null
@@ -321,6 +365,13 @@ class _DetailsPageState extends ConsumerState<DetailsPage> {
               ],
             ),
           ],
+          if (_item.id != null)
+            TrackSection(
+              item: _item,
+              itemId: _item.id!,
+              links: _tracks,
+              onChanged: _refreshTracks,
+            ),
           const SizedBox(height: 16),
           Row(
             children: [
@@ -448,9 +499,11 @@ class _DetailsPageState extends ConsumerState<DetailsPage> {
             ? null
             : () async {
                 final db = ref.read(databaseProvider);
-                await db.setProgress(u.id!, read: !u.read);
+                final nowRead = !u.read;
+                await db.setProgress(u.id!, read: nowRead);
                 final refreshed = await db.units(_item.id!);
                 if (mounted) setState(() => _units = refreshed);
+                if (nowRead) await _syncTrackers(u);
               },
       );
   }

@@ -5,7 +5,10 @@ import '../../core/providers.dart';
 import '../../core/theme.dart';
 import '../../core/theme_controller.dart';
 import '../browse/extensions_page.dart';
+import '../categories/categories_page.dart';
 import '../downloads/downloads_page.dart';
+import '../track/tracking_page.dart';
+import 'backup_page.dart';
 import 'appearance_page.dart';
 import 'network_page.dart';
 
@@ -17,6 +20,8 @@ class SettingsPage extends ConsumerWidget {
     final manager = ref.watch(extensionManagerProvider);
     final appearance = ref.watch(appearanceProvider);
     final downloads = ref.watch(downloadManagerProvider);
+    final tracking = ref.watch(trackingServiceProvider);
+    final categories = ref.watch(categoriesProvider).valueOrNull ?? const [];
 
     return Scaffold(
       appBar: AppBar(title: const Text('More')),
@@ -51,6 +56,35 @@ class SettingsPage extends ConsumerWidget {
             page: const DownloadsPage(),
           ),
           const Hairline(),
+          _label(context, 'LIBRARY'),
+          _tile(
+            context,
+            icon: Icons.label_outline,
+            title: 'Categories',
+            subtitle: categories.isEmpty
+                ? 'None yet'
+                : categories.map((c) => c.name).take(3).join(', '),
+            page: const CategoriesPage(),
+          ),
+          const Hairline(indent: 16),
+          _tile(
+            context,
+            icon: Icons.sync_alt,
+            title: 'Tracking',
+            subtitle: tracking.anyLoggedIn
+                ? tracking.loggedIn.map((t) => t.name).join(', ')
+                : 'AniList, MyAnimeList — not signed in',
+            page: const TrackingPage(),
+          ),
+          const Hairline(indent: 16),
+          _tile(
+            context,
+            icon: Icons.settings_backup_restore,
+            title: 'Backup & restore',
+            subtitle: 'Export or import your library',
+            page: const BackupPage(),
+          ),
+          const Hairline(),
           _label(context, 'APP'),
           _tile(
             context,
@@ -72,7 +106,7 @@ class SettingsPage extends ConsumerWidget {
           const Padding(
             padding: EdgeInsets.fromLTRB(16, 0, 16, 16),
             child: Text(
-              'Kurayomi 0.2.0\n\n'
+              'Kurayomi 0.3.0\n\n'
               'A manga and anime reader with a JavaScript extension runtime. '
               'Ships with no sources and makes no requests until you add a '
               'repository yourself.',

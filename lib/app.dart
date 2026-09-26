@@ -5,6 +5,7 @@ import 'core/app_keys.dart';
 import 'core/providers.dart';
 import 'core/theme.dart';
 import 'core/theme_controller.dart';
+import 'data/notify/notification_service.dart';
 import 'features/browse/browse_page.dart';
 import 'features/library/history_page.dart';
 import 'features/library/library_page.dart';
@@ -24,6 +25,8 @@ class _KurayomiAppState extends ConsumerState<KurayomiApp> {
       ref.read(extensionManagerProvider).init();
       // Resumes anything left queued by a previous run.
       ref.read(downloadManagerProvider).init();
+      // Android 13+ needs this before library-update notifications appear.
+      NotificationService.instance.requestPermission();
     });
   }
 

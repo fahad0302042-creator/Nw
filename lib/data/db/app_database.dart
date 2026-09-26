@@ -1,7 +1,9 @@
 import 'package:path/path.dart' as p;
 import 'package:sqflite/sqflite.dart';
 
+import '../../domain/models/category.dart';
 import '../../domain/models/media.dart';
+import '../../domain/models/track.dart';
 
 /// Local persistence for library, chapters/episodes and history.
 ///
@@ -15,7 +17,7 @@ class AppDatabase {
     final path = p.join(await getDatabasesPath(), 'kurayomi.db');
     final db = await openDatabase(
       path,
-      version: 2,
+      version: 3,
       onConfigure: (d) => d.execute('PRAGMA foreign_keys = ON'),
       onCreate: (d, _) async {
         await d.execute('''
@@ -56,9 +58,17 @@ class AppDatabase {
             'CREATE INDEX idx_items_library ON items(in_library, type)');
         await d.execute('CREATE INDEX idx_units_item ON units(item_id)');
         await _createDownloads(d);
+        await _createCategories(d);
+        await _createTracking(d);
+        await _addUpdateColumns(d);
       },
       onUpgrade: (d, from, to) async {
         if (from < 2) await _createDownloads(d);
+        if (from < 3) {
+          await _createCategories(d);
+          await _createTracking(d);
+          await _addUpdateColumns(d);
+        }
       },
     );
     return AppDatabase._(db);
@@ -84,6 +94,177 @@ class AppDatabase {
     ''');
     await d.execute(
         'CREATE INDEX IF NOT EXISTS idx_downloads_status ON downloads(status)');
+  }
+
+  static Future<void> _createCategories(Database d) async {
+    await d.execute('''
+      CREATE TABLE IF NOT EXISTS categories (
+        id         INTEGER PRIMARY KEY AUTOINCREMENT,
+        name       TEXT NOT NULL,
+        sort_order INTEGER NOT NULL DEFAULT 0
+      )
+    ''');
+    // Many-to-many, like Mihon: a series can sit in several categories.
+    await d.execute('''
+      CREATE TABLE IF NOT EXISTS item_categories (
+        item_id     INTEGER NOT NULL REFERENCES items(id) ON DELETE CASCADE,
+        category_id INTEGER NOT NULL REFERENCES categories(id) ON DELETE CASCADE,
+        PRIMARY KEY (item_id, category_id)
+      )
+    ''');
+  }
+
+  static Future<void> _createTracking(Database d) async {
+    await d.execute('''
+      CREATE TABLE IF NOT EXISTS track_links (
+        id            INTEGER PRIMARY KEY AUTOINCREMENT,
+        item_id       INTEGER NOT NULL REFERENCES items(id) ON DELETE CASCADE,
+        tracker       TEXT NOT NULL,
+        remote_id     TEXT NOT NULL,
+        title         TEXT NOT NULL,
+        status        TEXT NOT NULL,
+        last_progress INTEGER NOT NULL DEFAULT 0,
+        total_units   INTEGER NOT NULL DEFAULT 0,
+        score         REAL NOT NULL DEFAULT 0,
+        remote_url    TEXT,
+        cover_url     TEXT,
+        UNIQUE(item_id, tracker)
+      )
+    ''');
+  }
+
+  static Future<void> _addUpdateColumns(Database d) async {
+    // ALTER TABLE ADD COLUMN is the only portable migration sqlite offers;
+    // guard each one so a partially-applied upgrade can be re-run.
+    for (final sql in [
+      'ALTER TABLE items ADD COLUMN last_checked_at INTEGER',
+      'ALTER TABLE items ADD COLUMN new_count INTEGER NOT NULL DEFAULT 0',
+    ]) {
+      try {
+        await d.execute(sql);
+      } catch (_) {/* column already present */}
+    }
+  }
+
+  // ------------------------------------------------------------- categories
+
+  Future<List<LibraryCategory>> categories() async {
+    final rows = await db.query('categories', orderBy: 'sort_order ASC, id ASC');
+    return rows.map(LibraryCategory.fromRow).toList();
+  }
+
+  Future<int> createCategory(String name) async {
+    final rows = await db.rawQuery(
+        'SELECT COALESCE(MAX(sort_order), -1) + 1 AS next FROM categories');
+    return db.insert('categories', {
+      'name': name,
+      'sort_order': (rows.first['next'] as num).toInt(),
+    });
+  }
+
+  Future<void> renameCategory(int id, String name) =>
+      db.update('categories', {'name': name}, where: 'id = ?', whereArgs: [id]);
+
+  Future<void> deleteCategory(int id) =>
+      db.delete('categories', where: 'id = ?', whereArgs: [id]);
+
+  Future<void> reorderCategories(List<int> idsInOrder) async {
+    final batch = db.batch();
+    for (var i = 0; i < idsInOrder.length; i++) {
+      batch.update('categories', {'sort_order': i},
+          where: 'id = ?', whereArgs: [idsInOrder[i]]);
+    }
+    await batch.commit(noResult: true);
+  }
+
+  Future<List<int>> categoriesForItem(int itemId) async {
+    final rows = await db.query('item_categories',
+        columns: ['category_id'], where: 'item_id = ?', whereArgs: [itemId]);
+    return rows.map((r) => r['category_id'] as int).toList();
+  }
+
+  Future<void> setItemCategories(int itemId, List<int> categoryIds) async {
+    final batch = db.batch();
+    batch.delete('item_categories', where: 'item_id = ?', whereArgs: [itemId]);
+    for (final id in categoryIds) {
+      batch.insert('item_categories', {'item_id': itemId, 'category_id': id});
+    }
+    await batch.commit(noResult: true);
+  }
+
+  /// Library filtered to a category. [LibraryCategory.allId] returns
+  /// everything; [LibraryCategory.uncategorizedId] returns items in no
+  /// category at all.
+  Future<List<MediaItem>> libraryInCategory(MediaType type, int categoryId) async {
+    if (categoryId == LibraryCategory.allId) return library(type);
+
+    final sql = categoryId == LibraryCategory.uncategorizedId
+        ? '''
+          SELECT i.* FROM items i
+          WHERE i.in_library = 1 AND i.type = ?
+            AND NOT EXISTS (SELECT 1 FROM item_categories c WHERE c.item_id = i.id)
+          ORDER BY i.title COLLATE NOCASE ASC
+        '''
+        : '''
+          SELECT i.* FROM items i
+          JOIN item_categories c ON c.item_id = i.id
+          WHERE i.in_library = 1 AND i.type = ? AND c.category_id = ?
+          ORDER BY i.title COLLATE NOCASE ASC
+        ''';
+
+    final rows = await db.rawQuery(
+      sql,
+      categoryId == LibraryCategory.uncategorizedId
+          ? [type.name]
+          : [type.name, categoryId],
+    );
+    return rows.map(_itemFromRow).toList();
+  }
+
+  // --------------------------------------------------------------- tracking
+
+  Future<List<TrackLink>> trackLinks(int itemId) async {
+    final rows = await db
+        .query('track_links', where: 'item_id = ?', whereArgs: [itemId]);
+    return rows.map(TrackLink.fromRow).toList();
+  }
+
+  Future<int> upsertTrackLink(TrackLink link) async {
+    final existing = await db.query('track_links',
+        columns: ['id'],
+        where: 'item_id = ? AND tracker = ?',
+        whereArgs: [link.itemId, link.tracker.name],
+        limit: 1);
+    if (existing.isEmpty) return db.insert('track_links', link.toRow());
+    final id = existing.first['id'] as int;
+    await db.update('track_links', link.toRow(), where: 'id = ?', whereArgs: [id]);
+    return id;
+  }
+
+  Future<void> deleteTrackLink(int id) =>
+      db.delete('track_links', where: 'id = ?', whereArgs: [id]);
+
+  // ---------------------------------------------------------------- updates
+
+  Future<void> markChecked(int itemId, int newCount) => db.update(
+        'items',
+        {
+          'last_checked_at': DateTime.now().millisecondsSinceEpoch,
+          'new_count': newCount,
+        },
+        where: 'id = ?',
+        whereArgs: [itemId],
+      );
+
+  Future<void> clearNewCount(int itemId) => db.update('items', {'new_count': 0},
+      where: 'id = ?', whereArgs: [itemId]);
+
+  Future<Map<int, int>> newCounts() async {
+    final rows = await db.query('items',
+        columns: ['id', 'new_count'], where: 'in_library = 1 AND new_count > 0');
+    return {
+      for (final r in rows) r['id'] as int: (r['new_count'] as int?) ?? 0,
+    };
   }
 
   // -------------------------------------------------------------- downloads
@@ -196,7 +377,15 @@ class AppDatabase {
 
   /// Merges a freshly fetched unit list into the cache, preserving read
   /// state and progress for units we already know about.
-  Future<void> syncUnits(int itemId, List<MediaUnit> fresh) async {
+  ///
+  /// Returns how many units were genuinely new, which is what the library
+  /// update check reports to the user.
+  Future<int> syncUnits(int itemId, List<MediaUnit> fresh) async {
+    final knownRows = await db.query('units',
+        columns: ['url'], where: 'item_id = ?', whereArgs: [itemId]);
+    final known = {for (final r in knownRows) '${r['url']}'};
+    final newCount = fresh.where((u) => !known.contains(u.url)).length;
+
     final batch = db.batch();
     final now = DateTime.now().millisecondsSinceEpoch;
     for (final u in fresh) {
@@ -219,6 +408,7 @@ class AppDatabase {
       ]);
     }
     await batch.commit(noResult: true);
+    return newCount;
   }
 
   Future<List<MediaUnit>> units(int itemId) async {
