@@ -1,0 +1,11 @@
+{
+  "title": "Lantern Street Nights",
+  "author": "Placeholder Studio",
+  "status": "Completed",
+  "cover": "https://picsum.photos/seed/lantern/400/600",
+  "description": "Second placeholder series. Useful for checking that switching between entries reloads details and chapters correctly.",
+  "genres": ["Demo", "Slice of test"],
+  "chapters": [
+    { "name": "Chapter 1 - Opening Night", "date": "2026-01-15", "url": "demo/lantern-ch1.json" }
+  ]
+}

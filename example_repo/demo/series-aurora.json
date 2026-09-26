@@ -1,0 +1,12 @@
+{
+  "title": "Aurora Drifter",
+  "author": "Placeholder Studio",
+  "status": "Ongoing",
+  "cover": "https://picsum.photos/seed/aurora/400/600",
+  "description": "A generic placeholder series used to test the Kuroyomi reader pipeline: listing, details, chapter list, and page loading. The artwork is randomly generated filler, not real manga.",
+  "genres": ["Demo", "Placeholder", "Testing"],
+  "chapters": [
+    { "name": "Chapter 2 - Second Light", "date": "2026-02-01", "url": "demo/aurora-ch2.json" },
+    { "name": "Chapter 1 - First Light", "date": "2026-01-01", "url": "demo/aurora-ch1.json" }
+  ]
+}

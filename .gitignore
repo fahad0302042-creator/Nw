@@ -1,0 +1,22 @@
+# Flutter / Dart
+.dart_tool/
+.packages
+.flutter-plugins
+.flutter-plugins-dependencies
+build/
+pubspec.lock
+*.iml
+.idea/
+.vscode/
+
+# Generated native platform folders (recreated by tool/prepare_android.sh)
+/android/
+/ios/
+/linux/
+/macos/
+/windows/
+/web/
+
+# OS junk
+.DS_Store
+Thumbs.db

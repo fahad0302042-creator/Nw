@@ -1,0 +1,22 @@
+{
+  "series": [
+    {
+      "title": "Aurora Drifter",
+      "author": "Placeholder Studio",
+      "cover": "https://picsum.photos/seed/aurora/400/600",
+      "url": "demo/series-aurora.json"
+    },
+    {
+      "title": "Lantern Street Nights",
+      "author": "Placeholder Studio",
+      "cover": "https://picsum.photos/seed/lantern/400/600",
+      "url": "demo/series-lantern.json"
+    },
+    {
+      "title": "Paper Tiger Club",
+      "author": "Placeholder Studio",
+      "cover": "https://picsum.photos/seed/tiger/400/600",
+      "url": "demo/series-tiger.json"
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "title": "Stream Test Reel",
+  "status": "Ongoing",
+  "cover": "https://picsum.photos/seed/streamtest/400/600",
+  "description": "A second placeholder anime entry, handy for testing quality switching inside the player.",
+  "genres": ["Demo"],
+  "episodes": [
+    { "name": "Episode 1 - Multi quality", "url": "demo/episode-multi.json" }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "series": [
+    {
+      "title": "Open Movie Sampler",
+      "cover": "https://picsum.photos/seed/openmovie/400/600",
+      "url": "demo/anime-sampler.json"
+    },
+    {
+      "title": "Stream Test Reel",
+      "cover": "https://picsum.photos/seed/streamtest/400/600",
+      "url": "demo/anime-streamtest.json"
+    }
+  ]
+}

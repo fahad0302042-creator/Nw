@@ -1,0 +1,13 @@
+{
+  "title": "Paper Tiger Club",
+  "author": "Placeholder Studio",
+  "status": "Hiatus",
+  "cover": "https://picsum.photos/seed/tiger/400/600",
+  "description": "Third placeholder series with a longer chapter list so you can test scrolling, read markers and resume position.",
+  "genres": ["Demo", "Testing"],
+  "chapters": [
+    { "name": "Chapter 3", "date": "2026-03-01", "url": "demo/aurora-ch2.json" },
+    { "name": "Chapter 2", "date": "2026-02-01", "url": "demo/aurora-ch1.json" },
+    { "name": "Chapter 1", "date": "2026-01-01", "url": "demo/lantern-ch1.json" }
+  ]
+}

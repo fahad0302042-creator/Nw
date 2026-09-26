@@ -1,0 +1,129 @@
+{
+  "name": "Kuroyomi Demo Repository",
+  "description": "Self-contained demo sources used to verify the app end to end. All titles and artwork are generic placeholders.",
+  "schema": 1,
+  "sources": [
+    {
+      "schema": 1,
+      "id": "demo-manga",
+      "name": "Demo Manga",
+      "type": "manga",
+      "lang": "en",
+      "version": "1.0.0",
+      "parse": "json",
+      "baseUrl": "https://raw.githubusercontent.com/fahad0302042-creator/Nw/arena/01a0dbdc-nw/example_repo",
+      "endpoints": {
+        "popular": {
+          "url": "demo/manga-library.json",
+          "items": "series",
+          "fields": {
+            "title": { "path": "title" },
+            "url": { "path": "url" },
+            "thumbnail": { "path": "cover" },
+            "subtitle": { "path": "author" }
+          }
+        },
+        "latest": {
+          "url": "demo/manga-library.json",
+          "items": "series",
+          "fields": {
+            "title": { "path": "title" },
+            "url": { "path": "url" },
+            "thumbnail": { "path": "cover" }
+          }
+        },
+        "search": {
+          "url": "demo/manga-library.json",
+          "items": "series",
+          "filter": true,
+          "fields": {
+            "title": { "path": "title" },
+            "url": { "path": "url" },
+            "thumbnail": { "path": "cover" }
+          }
+        },
+        "details": {
+          "url": "{url}",
+          "fields": {
+            "title": { "path": "title" },
+            "description": { "path": "description" },
+            "author": { "path": "author" },
+            "status": { "path": "status" },
+            "thumbnail": { "path": "cover" },
+            "genres": { "path": "genres" }
+          }
+        },
+        "chapters": {
+          "url": "{url}",
+          "items": "chapters",
+          "fields": {
+            "name": { "path": "name" },
+            "url": { "path": "url" },
+            "date": { "path": "date" }
+          }
+        },
+        "pages": {
+          "url": "{url}",
+          "items": "pages"
+        }
+      }
+    },
+    {
+      "schema": 1,
+      "id": "demo-anime",
+      "name": "Demo Anime",
+      "type": "anime",
+      "lang": "en",
+      "version": "1.0.0",
+      "parse": "json",
+      "baseUrl": "https://raw.githubusercontent.com/fahad0302042-creator/Nw/arena/01a0dbdc-nw/example_repo",
+      "endpoints": {
+        "popular": {
+          "url": "demo/anime-library.json",
+          "items": "series",
+          "fields": {
+            "title": { "path": "title" },
+            "url": { "path": "url" },
+            "thumbnail": { "path": "cover" }
+          }
+        },
+        "search": {
+          "url": "demo/anime-library.json",
+          "items": "series",
+          "filter": true,
+          "fields": {
+            "title": { "path": "title" },
+            "url": { "path": "url" },
+            "thumbnail": { "path": "cover" }
+          }
+        },
+        "details": {
+          "url": "{url}",
+          "fields": {
+            "title": { "path": "title" },
+            "description": { "path": "description" },
+            "status": { "path": "status" },
+            "thumbnail": { "path": "cover" },
+            "genres": { "path": "genres" }
+          }
+        },
+        "episodes": {
+          "url": "{url}",
+          "items": "episodes",
+          "fields": {
+            "name": { "path": "name" },
+            "url": { "path": "url" }
+          }
+        },
+        "video": {
+          "url": "{url}",
+          "items": "sources",
+          "fields": {
+            "url": { "path": "file" },
+            "quality": { "path": "quality" }
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "title": "Open Movie Sampler",
+  "status": "Completed",
+  "cover": "https://picsum.photos/seed/openmovie/400/600",
+  "description": "Placeholder anime entry that plays freely licensed open movie clips. Use it to verify episode listing, stream resolution and the video player.",
+  "genres": ["Demo", "Open licence"],
+  "episodes": [
+    { "name": "Episode 2 - MP4 progressive", "url": "demo/episode-mp4.json" },
+    { "name": "Episode 1 - HLS stream", "url": "demo/episode-hls.json" }
+  ]
+}
