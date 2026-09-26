@@ -50,7 +50,22 @@ jobs:
         run: bash tool/prepare_android.sh
 
       - name: Build release APK
-        run: flutter build apk --release
+        run: |
+          set -o pipefail
+          flutter build apk --release 2>&1 | tee /tmp/build.log
+
+      - name: Surface build failure
+        if: failure()
+        run: |
+          python3 - <<'PY'
+          import os
+          path = "/tmp/build.log"
+          text = open(path).read() if os.path.exists(path) else "no build log captured"
+          # Keep the interesting part: gradle prints the reason near the end.
+          tail = text[-7000:]
+          esc = tail.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
+          print(f"::error title=Gradle build failed::{esc}")
+          PY
 
       - name: Rename APK
         run: |
