@@ -41,6 +41,7 @@ enum class NavStyle(
     val tabs: List<Tab>
         get() {
             return mutableListOf(
+                FeedTab,
                 AnimeLibraryTab,
                 MangaLibraryTab,
                 UpdatesTab,
