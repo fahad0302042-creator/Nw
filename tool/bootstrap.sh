@@ -75,64 +75,17 @@ else
   fi
 fi
 
-# ------------------------------------------------------- 2. patch the manifest
+# ------------------------------------------- 1b. drop flutter create leftovers
+# `flutter create` writes test/widget_test.dart referencing a `MyApp` class
+# this project does not have; it fails both analyze and test.
+if [ -f test/widget_test.dart ] && grep -q 'MyApp' test/widget_test.dart; then
+  rm -f test/widget_test.dart
+  echo "   removed the template test/widget_test.dart"
+fi
+
+# ---------------------------------------------- 2. Android project configuration
 say "Applying Android configuration"
-python3 - <<'PY'
-import re, sys, pathlib
-
-man = pathlib.Path('android/app/src/main/AndroidManifest.xml')
-if not man.exists():
-    sys.exit('AndroidManifest.xml missing')
-
-s = man.read_text()
-changed = []
-
-perms = [
-    ('android.permission.INTERNET',       'every source needs network access'),
-    ('android.permission.WAKE_LOCK',      'keep the screen awake while watching'),
-    ('android.permission.ACCESS_NETWORK_STATE', 'offline detection'),
-]
-block = ''.join(
-    f'    <uses-permission android:name="{p}"/>\n'
-    for p, _ in perms if p not in s
-)
-if block:
-    s = re.sub(r'(<manifest[^>]*>\s*\n)', r'\1' + block, s, count=1)
-    changed.append('permissions')
-
-# Many sources and image CDNs are still plain http://
-if 'usesCleartextTraffic' not in s:
-    s = s.replace('<application',
-                  '<application\n        android:usesCleartextTraffic="true"', 1)
-    changed.append('cleartext traffic')
-
-# WebView challenge pages need hardware acceleration to render correctly
-if 'hardwareAccelerated' not in s:
-    s = s.replace('<application',
-                  '<application\n        android:hardwareAccelerated="true"', 1)
-    changed.append('hardware acceleration')
-
-man.write_text(s)
-print('   manifest: ' + (', '.join(changed) if changed else 'already configured'))
-PY
-
-# ------------------------------------------------------- 3. gradle sanity
-python3 - <<'PY'
-import pathlib, re
-for name in ('android/app/build.gradle.kts', 'android/app/build.gradle'):
-    f = pathlib.Path(name)
-    if not f.exists():
-        continue
-    s = f.read_text()
-    m = re.search(r'minSdk\s*=?\s*(\d+)', s)
-    if m and int(m.group(1)) < 21:
-        s = re.sub(r'(minSdk\s*=?\s*)\d+', r'\g<1>21', s)
-        f.write_text(s)
-        print(f'   {name}: minSdk raised to 21 (media_kit requirement)')
-    else:
-        print(f'   {name}: minSdk OK')
-    break
-PY
+python3 tool/android_patch.py
 
 # ------------------------------------------------------------ 4. dependencies
 say "Fetching packages"

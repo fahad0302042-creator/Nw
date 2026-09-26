@@ -37,7 +37,7 @@ void main() {
 
   group('ExtensionInfo JSON', () {
     test('round-trips through toJson/fromJson', () {
-      final original = ExtensionInfo(
+      const original = ExtensionInfo(
         id: 'en.x',
         name: 'X',
         version: '2.1.0',

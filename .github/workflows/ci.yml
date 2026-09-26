@@ -104,6 +104,28 @@ jobs:
       # Each step tees to a log and records its own outcome, so a failure
       # never hides the steps after it. The report step at the end surfaces
       # everything at once.
+      - name: Toolchain diagnostics
+        if: always()
+        run: |
+          {
+            echo "flutter: $(flutter --version | head -1)"
+            echo "java:    $(java -version 2>&1 | head -1)"
+            echo -n "AGP:     "
+            grep -o 'com\.android\.application[^\n]*' android/settings.gradle.kts || echo '?'
+            echo -n "gradle:  "
+            grep distributionUrl android/gradle/wrapper/gradle-wrapper.properties || echo '?'
+            echo
+            echo "-- pub.dev latest versions --"
+            for pkg in flutter_inappwebview flutter_inappwebview_android flutter_js media_kit; do
+              v=$(curl -s "https://pub.dev/api/packages/$pkg" | python3 -c \
+                "import sys,json; d=json.load(sys.stdin); print(d['latest']['version'])" 2>/dev/null || echo '?')
+              echo "$pkg: $v"
+            done
+            echo
+            echo "-- resolved in this build --"
+            grep -A1 -E '^  (flutter_inappwebview|flutter_inappwebview_android|flutter_js|media_kit):' pubspec.lock | grep version || true
+          } 2>&1 | tee diag.log
+
       - name: Analyze
         id: analyze
         continue-on-error: true
@@ -150,7 +172,7 @@ jobs:
             echo
           } > report.md
 
-          for pair in "Analyze:analyze.log" "Unit tests:test.log" "Build:build.log"; do
+          for pair in "Toolchain:diag.log" "Analyze:analyze.log" "Unit tests:test.log" "Build:build.log"; do
             name="${pair%%:*}"
             file="${pair##*:}"
             [ -f "$file" ] || continue
@@ -199,6 +221,7 @@ jobs:
         with:
           name: ci-logs
           path: |
+            diag.log
             analyze.log
             test.log
             build.log
