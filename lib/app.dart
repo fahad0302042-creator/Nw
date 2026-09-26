@@ -22,6 +22,8 @@ class _KurayomiAppState extends ConsumerState<KurayomiApp> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(extensionManagerProvider).init();
+      // Resumes anything left queued by a previous run.
+      ref.read(downloadManagerProvider).init();
     });
   }
 

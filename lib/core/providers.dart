@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/db/app_database.dart';
 import '../domain/models/media.dart';
 import '../domain/source/media_source.dart';
+import '../data/download/download_manager.dart';
 import '../extensions/extension_manager.dart';
 
 /// Resolved during app bootstrap in main().
@@ -27,6 +28,16 @@ final sourcesProvider = Provider.family<List<MediaSource>, MediaType?>((ref, typ
 final sourceByIdProvider = Provider.family<MediaSource?, String>(
   (ref, id) => ref.watch(extensionManagerProvider).sourceById(id),
 );
+
+final downloadManagerProvider = ChangeNotifierProvider<DownloadManager>((ref) {
+  final manager = DownloadManager(
+    db: ref.watch(databaseProvider),
+    // Resolved lazily: an extension may be installed after the queue exists.
+    resolveSource: (id) => ref.read(extensionManagerProvider).sourceById(id),
+  );
+  ref.onDispose(manager.dispose);
+  return manager;
+});
 
 /// The library, per medium. Invalidate after add/remove to refresh.
 final libraryProvider =

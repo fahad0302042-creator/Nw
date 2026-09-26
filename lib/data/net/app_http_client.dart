@@ -47,6 +47,11 @@ class AppHttpClient {
 
   CookieStore get cookies => _cookies;
 
+  /// The shared Dio. Downloads stream straight to disk rather than through
+  /// [request], so they need the client directly — but they still reuse this
+  /// instance so connection pooling and cookies are shared.
+  Dio get dio => _dio;
+
   /// Non-null once [instance] has completed. Used by sync call-sites such as
   /// image widgets that need cookie headers but cannot await.
   static AppHttpClient? get current => _instance;

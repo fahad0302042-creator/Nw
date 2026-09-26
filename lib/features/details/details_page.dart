@@ -1,7 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/providers.dart';
+import '../../data/download/download_storage.dart';
+import '../../domain/models/download.dart';
 import '../../domain/models/media.dart';
 import '../../domain/source/media_source.dart';
 import '../common/widgets.dart';
@@ -26,6 +30,8 @@ class _DetailsPageState extends ConsumerState<DetailsPage> {
   bool _loading = true;
   Object? _error;
   bool _descExpanded = false;
+  /// Unit names with a completed local copy, refreshed alongside the list.
+  Set<String> _downloaded = {};
 
   MediaSource? get _source => ref.read(sourceByIdProvider(_item.sourceId));
 
@@ -80,6 +86,7 @@ class _DetailsPageState extends ConsumerState<DetailsPage> {
         _units = merged.isEmpty ? fresh : merged;
         _loading = false;
       });
+      unawaited(_refreshDownloaded());
     } catch (e) {
       if (mounted) {
         setState(() {
@@ -88,6 +95,33 @@ class _DetailsPageState extends ConsumerState<DetailsPage> {
         });
       }
     }
+  }
+
+  Future<void> _refreshDownloaded() async {
+    final storage = await DownloadStorage.instance();
+    final found = <String>{
+      for (final u in _units)
+        if (storage.hasLocalCopy(
+            _item.type, _item.sourceId, _item.title, u.name))
+          u.name,
+    };
+    if (mounted) setState(() => _downloaded = found);
+  }
+
+  Future<void> _downloadUnits(List<MediaUnit> units) async {
+    if (units.isEmpty) return;
+    final added = await ref
+        .read(downloadManagerProvider)
+        .enqueue(item: _item, units: units);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(added == 0
+            ? 'Already downloaded or queued'
+            : 'Queued $added ${_item.type.unitLabelPlural.toLowerCase()}'),
+        duration: const Duration(seconds: 2),
+      ),
+    );
   }
 
   Future<void> _toggleLibrary() async {
@@ -229,6 +263,24 @@ class _DetailsPageState extends ConsumerState<DetailsPage> {
                 label: Text(_item.inLibrary ? 'In library' : 'Add'),
               ),
               const SizedBox(width: 8),
+              PopupMenuButton<int>(
+                tooltip: 'Download',
+                icon: const Icon(Icons.download_outlined),
+                onSelected: (n) {
+                  final pending = _units
+                      .where((u) => !_downloaded.contains(u.name))
+                      .toList()
+                      .reversed // oldest first, so reading order downloads first
+                      .toList();
+                  _downloadUnits(n == -1 ? pending : pending.take(n).toList());
+                },
+                itemBuilder: (_) => const [
+                  PopupMenuItem(value: 1, child: Text('Download next')),
+                  PopupMenuItem(value: 5, child: Text('Download next 5')),
+                  PopupMenuItem(value: 10, child: Text('Download next 10')),
+                  PopupMenuItem(value: -1, child: Text('Download all')),
+                ],
+              ),
               IconButton(
                 tooltip: 'Mark all read',
                 icon: const Icon(Icons.done_all),
@@ -317,7 +369,76 @@ class _DetailsPageState extends ConsumerState<DetailsPage> {
       subtitle: subtitle.isEmpty
           ? null
           : Text(subtitle, style: TextStyle(color: scheme.outline, fontSize: 11)),
-      trailing: IconButton(
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _downloadButton(u),
+          _readButton(u, scheme),
+        ],
+      ),
+      onTap: () => _open(u),
+    );
+  }
+
+  Widget _downloadButton(MediaUnit u) {
+    final scheme = Theme.of(context).colorScheme;
+    final manager = ref.watch(downloadManagerProvider);
+    final task = manager.taskFor(_item.sourceId, _item.url, u.url);
+    final isDownloaded =
+        _downloaded.contains(u.name) || task?.status == DownloadStatus.completed;
+
+    if (isDownloaded) {
+      return IconButton(
+        icon: Icon(Icons.download_done, size: 20, color: scheme.primary),
+        tooltip: 'Downloaded — tap to delete',
+        onPressed: () async {
+          final storage = await DownloadStorage.instance();
+          if (task != null) {
+            await manager.deleteDownloaded(task);
+          } else {
+            await storage.deleteUnit(_item.sourceId, _item.title, u.name);
+          }
+          await _refreshDownloaded();
+        },
+      );
+    }
+
+    if (task != null && task.status.isActive) {
+      return SizedBox(
+        width: 40,
+        height: 40,
+        child: Center(
+          child: SizedBox(
+            width: 16,
+            height: 16,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              value: task.status == DownloadStatus.downloading
+                  ? task.progress
+                  : null,
+            ),
+          ),
+        ),
+      );
+    }
+
+    if (task?.status == DownloadStatus.failed) {
+      return IconButton(
+        icon: Icon(Icons.error_outline, size: 20, color: scheme.error),
+        tooltip: task?.error ?? 'Failed — tap to retry',
+        onPressed: () => manager.retry(task!),
+      );
+    }
+
+    return IconButton(
+      icon: Icon(Icons.download_outlined, size: 20, color: scheme.outline),
+      tooltip: 'Download',
+      onPressed: () => _downloadUnits([u]),
+    );
+  }
+
+  Widget _readButton(MediaUnit u, ColorScheme scheme) {
+    return IconButton(
         icon: Icon(
           u.read ? Icons.check_circle : Icons.circle_outlined,
           size: 20,
@@ -331,8 +452,6 @@ class _DetailsPageState extends ConsumerState<DetailsPage> {
                 final refreshed = await db.units(_item.id!);
                 if (mounted) setState(() => _units = refreshed);
               },
-      ),
-      onTap: () => _open(u),
-    );
+      );
   }
 }

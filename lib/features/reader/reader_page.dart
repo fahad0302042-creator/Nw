@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -5,6 +7,7 @@ import 'package:photo_view/photo_view.dart';
 import 'package:photo_view/photo_view_gallery.dart';
 
 import '../../core/providers.dart';
+import '../../data/download/download_storage.dart';
 import '../../domain/models/media.dart';
 import '../../domain/source/media_source.dart';
 import '../common/widgets.dart';
@@ -38,6 +41,10 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
   final _scrollCtl = ScrollController();
 
   List<ReaderPage> _pages = const [];
+  /// Populated when this chapter is downloaded; the reader then never
+  /// touches the network.
+  List<File> _localPages = const [];
+  bool get _isOffline => _localPages.isNotEmpty;
   bool _loading = true;
   Object? _error;
   bool _chromeVisible = false;
@@ -69,8 +76,29 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
       _loading = true;
       _error = null;
       _pages = const [];
+      _localPages = const [];
     });
     try {
+      // Offline first: a downloaded chapter must open with no network at
+      // all, which also means no source lookup and no failure path.
+      final storage = await DownloadStorage.instance();
+      final local = storage.localPages(
+          widget.item.sourceId, widget.item.title, _unit.name);
+      if (local.isNotEmpty) {
+        if (!mounted) return;
+        setState(() {
+          _localPages = local;
+          _pages = [
+            for (var i = 0; i < local.length; i++)
+              ReaderPage(index: i, imageUrl: local[i].path),
+          ];
+          _loading = false;
+          _current =
+              _unit.progress.clamp(0, local.isEmpty ? 0 : local.length - 1);
+        });
+        return;
+      }
+
       final pages = await _source!.pages(_unit);
       if (!mounted) return;
       setState(() {
@@ -91,13 +119,20 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
 
   /// Warm the image cache a few pages ahead so scrolling stays smooth.
   void _preload() {
-    final headers = _source?.mediaHeaders;
     for (var i = _current; i < _current + 3 && i < _pages.length; i++) {
-      precacheImage(
-        NetworkImage(_pages[i].imageUrl, headers: _pages[i].headers ?? headers),
-        context,
-      ).catchError((_) {});
+      precacheImage(_imageProvider(i), context).catchError((_) {});
     }
+  }
+
+  /// One place that decides local file vs network, so every rendering path
+  /// stays consistent.
+  ImageProvider _imageProvider(int index) {
+    if (_isOffline) return FileImage(_localPages[index]);
+    final page = _pages[index];
+    return NetworkImage(
+      page.imageUrl,
+      headers: page.headers ?? _source?.mediaHeaders,
+    );
   }
 
   Future<void> _saveProgress(int page) async {
@@ -154,8 +189,6 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
       );
     }
 
-    final headers = _source?.mediaHeaders;
-
     if (_mode == ReadingMode.vertical) {
       return GestureDetector(
         onTap: () => setState(() => _chromeVisible = !_chromeVisible),
@@ -164,10 +197,9 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
           itemCount: _pages.length + 1,
           itemBuilder: (_, i) {
             if (i == _pages.length) return _endOfChapter();
-            final p = _pages[i];
             return _VerticalPage(
-              page: p,
-              headers: p.headers ?? headers,
+              image: _imageProvider(i),
+              index: i,
               onVisible: () {
                 if (i != _current) _onPageChanged(i);
               },
@@ -187,9 +219,8 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
       loadingBuilder: (_, __) =>
           const Center(child: CircularProgressIndicator()),
       builder: (_, i) {
-        final p = _pages[i];
         return PhotoViewGalleryPageOptions(
-          imageProvider: NetworkImage(p.imageUrl, headers: p.headers ?? headers),
+          imageProvider: _imageProvider(i),
           minScale: PhotoViewComputedScale.contained,
           maxScale: PhotoViewComputedScale.covered * 3,
           onTapUp: (_, __, ___) =>
@@ -333,13 +364,13 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
 /// scrolling without a heavyweight visibility-detector dependency.
 class _VerticalPage extends StatelessWidget {
   const _VerticalPage({
-    required this.page,
-    required this.headers,
+    required this.image,
+    required this.index,
     required this.onVisible,
   });
 
-  final ReaderPage page;
-  final Map<String, String>? headers;
+  final ImageProvider image;
+  final int index;
   final VoidCallback onVisible;
 
   @override
@@ -354,17 +385,17 @@ class _VerticalPage extends StatelessWidget {
           final h = MediaQuery.of(context).size.height;
           if (y < h * 0.5 && y + box.size.height > h * 0.2) onVisible();
         });
-        return Image.network(
-          page.imageUrl,
-          headers: headers,
+        return Image(
+          image: image,
           fit: BoxFit.fitWidth,
           width: double.infinity,
-          loadingBuilder: (_, child, progress) => progress == null
-              ? child
-              : const SizedBox(
-                  height: 420,
-                  child: Center(child: CircularProgressIndicator()),
-                ),
+          frameBuilder: (_, child, frame, wasSync) =>
+              (frame != null || wasSync)
+                  ? child
+                  : const SizedBox(
+                      height: 420,
+                      child: Center(child: CircularProgressIndicator()),
+                    ),
           errorBuilder: (_, __, ___) => SizedBox(
             height: 220,
             child: Center(
@@ -373,7 +404,7 @@ class _VerticalPage extends StatelessWidget {
                 children: [
                   const Icon(Icons.broken_image_outlined, color: Colors.white38),
                   const SizedBox(height: 8),
-                  Text('Page ${page.index + 1} failed to load',
+                  Text('Page ${index + 1} failed to load',
                       style: const TextStyle(color: Colors.white38)),
                 ],
               ),

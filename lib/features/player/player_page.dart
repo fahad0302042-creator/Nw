@@ -7,6 +7,7 @@ import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 
 import '../../core/providers.dart';
+import '../../data/download/download_storage.dart';
 import '../../domain/models/media.dart';
 import '../../domain/source/media_source.dart';
 import '../common/widgets.dart';
@@ -87,6 +88,22 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
       _error = null;
     });
     try {
+      // A downloaded episode plays with no network and no source lookup.
+      final storage = await DownloadStorage.instance();
+      final local = storage.localVideo(
+          widget.item.sourceId, widget.item.title, _unit.name);
+      if (local != null) {
+        if (!mounted) return;
+        setState(() {
+          _streams = [VideoStream(url: local.path, quality: 'Downloaded')];
+          _streamIndex = 0;
+          _loading = false;
+        });
+        await _play(_streams.first,
+            startAt: Duration(milliseconds: _unit.progress));
+        return;
+      }
+
       final streams = await _source!.videos(_unit);
       if (streams.isEmpty) throw StateError('No playable streams found');
       if (!mounted) return;

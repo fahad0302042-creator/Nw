@@ -5,6 +5,7 @@ import '../../core/providers.dart';
 import '../../core/theme.dart';
 import '../../core/theme_controller.dart';
 import '../browse/extensions_page.dart';
+import '../downloads/downloads_page.dart';
 import 'appearance_page.dart';
 import 'network_page.dart';
 
@@ -15,6 +16,7 @@ class SettingsPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final manager = ref.watch(extensionManagerProvider);
     final appearance = ref.watch(appearanceProvider);
+    final downloads = ref.watch(downloadManagerProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('More')),
@@ -37,6 +39,16 @@ class SettingsPage extends ConsumerWidget {
             title: 'Repositories',
             subtitle: '${manager.repoUrls.length} configured',
             page: const ReposPage(),
+          ),
+          const Hairline(indent: 16),
+          _tile(
+            context,
+            icon: Icons.download_outlined,
+            title: 'Downloads',
+            subtitle: downloads.activeCount > 0
+                ? '${downloads.activeCount} in queue'
+                : '${downloads.tasks.length} saved',
+            page: const DownloadsPage(),
           ),
           const Hairline(),
           _label(context, 'APP'),

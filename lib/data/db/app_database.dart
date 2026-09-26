@@ -15,7 +15,7 @@ class AppDatabase {
     final path = p.join(await getDatabasesPath(), 'kurayomi.db');
     final db = await openDatabase(
       path,
-      version: 1,
+      version: 2,
       onConfigure: (d) => d.execute('PRAGMA foreign_keys = ON'),
       onCreate: (d, _) async {
         await d.execute('''
@@ -55,10 +55,64 @@ class AppDatabase {
         await d.execute(
             'CREATE INDEX idx_items_library ON items(in_library, type)');
         await d.execute('CREATE INDEX idx_units_item ON units(item_id)');
+        await _createDownloads(d);
+      },
+      onUpgrade: (d, from, to) async {
+        if (from < 2) await _createDownloads(d);
       },
     );
     return AppDatabase._(db);
   }
+
+  static Future<void> _createDownloads(Database d) async {
+    await d.execute('''
+      CREATE TABLE IF NOT EXISTS downloads (
+        id              INTEGER PRIMARY KEY AUTOINCREMENT,
+        source_id       TEXT NOT NULL,
+        type            TEXT NOT NULL,
+        item_url        TEXT NOT NULL,
+        item_title      TEXT NOT NULL,
+        unit_url        TEXT NOT NULL,
+        unit_name       TEXT NOT NULL,
+        status          TEXT NOT NULL,
+        completed_parts INTEGER NOT NULL DEFAULT 0,
+        total_parts     INTEGER NOT NULL DEFAULT 0,
+        bytes           INTEGER NOT NULL DEFAULT 0,
+        error           TEXT,
+        UNIQUE(source_id, item_url, unit_url)
+      )
+    ''');
+    await d.execute(
+        'CREATE INDEX IF NOT EXISTS idx_downloads_status ON downloads(status)');
+  }
+
+  // -------------------------------------------------------------- downloads
+
+  Future<List<Map<String, Object?>>> allDownloads() =>
+      db.query('downloads', orderBy: 'id ASC');
+
+  /// Insert or update by the (source, item, unit) identity, preserving the
+  /// row id so an in-flight task keeps its queue position.
+  Future<int> upsertDownload(Map<String, Object?> row) async {
+    final existing = await db.query(
+      'downloads',
+      columns: ['id'],
+      where: 'source_id = ? AND item_url = ? AND unit_url = ?',
+      whereArgs: [row['source_id'], row['item_url'], row['unit_url']],
+      limit: 1,
+    );
+    if (existing.isEmpty) {
+      return db.insert('downloads', row);
+    }
+    final id = existing.first['id'] as int;
+    await db.update('downloads', row, where: 'id = ?', whereArgs: [id]);
+    return id;
+  }
+
+  Future<void> deleteDownload(int id) =>
+      db.delete('downloads', where: 'id = ?', whereArgs: [id]);
+
+  Future<void> clearDownloads() => db.delete('downloads');
 
   // ------------------------------------------------------------------ items
 
