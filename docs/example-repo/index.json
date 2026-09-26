@@ -1,0 +1,15 @@
+{
+  "name": "Example Tsundoku Repository",
+  "extensions": [
+    {
+      "id": "example-source",
+      "name": "Example Source",
+      "lang": "en",
+      "version": "1.0.0",
+      "type": "manga",
+      "icon": "",
+      "description": "Points at example-source.json in this same folder.",
+      "sourceUrl": "https://raw.githubusercontent.com/fahad0302042-creator/Nw/main/docs/example-repo/example-source.json"
+    }
+  ]
+}

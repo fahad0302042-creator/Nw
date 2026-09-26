@@ -1,0 +1,86 @@
+{
+  "id": "tsundoku-demo-manga",
+  "name": "Demo Manga (offline sample)",
+  "lang": "en",
+  "version": "1.0.0",
+  "type": "manga",
+  "baseUrl": "https://picsum.photos",
+  "icon": "",
+  "description": "A bundled, always-available sample source (public placeholder images) so you can try the reader immediately, with nothing to configure. Not a real scraper - install a real extension from Extensions > Add repository/URL to read actual manga.",
+  "headers": {},
+  "popular": {
+    "responseType": "static",
+    "items": [
+      {
+        "id": "demo-1",
+        "title": "Tsundoku Demo Comic",
+        "cover": "https://picsum.photos/id/237/400/600",
+        "subtitle": "Ongoing \u00b7 Demo"
+      }
+    ],
+    "fields": {
+      "id": { "path": "id" },
+      "title": { "path": "title" },
+      "cover": { "path": "cover" },
+      "subtitle": { "path": "subtitle" }
+    }
+  },
+  "latest": {
+    "responseType": "static",
+    "items": [
+      {
+        "id": "demo-1",
+        "title": "Tsundoku Demo Comic",
+        "cover": "https://picsum.photos/id/237/400/600",
+        "subtitle": "Ongoing \u00b7 Demo"
+      }
+    ],
+    "fields": {
+      "id": { "path": "id" },
+      "title": { "path": "title" },
+      "cover": { "path": "cover" },
+      "subtitle": { "path": "subtitle" }
+    }
+  },
+  "search": {
+    "responseType": "static",
+    "items": [
+      {
+        "id": "demo-1",
+        "title": "Tsundoku Demo Comic",
+        "cover": "https://picsum.photos/id/237/400/600",
+        "subtitle": "Ongoing \u00b7 Demo"
+      }
+    ],
+    "fields": {
+      "id": { "path": "id" },
+      "title": { "path": "title" },
+      "cover": { "path": "cover" },
+      "subtitle": { "path": "subtitle" }
+    }
+  },
+  "chapters": {
+    "responseType": "static",
+    "items": [
+      { "id": "ch3", "number": 3, "title": "Chapter 3 - Finale" },
+      { "id": "ch2", "number": 2, "title": "Chapter 2 - Rising Action" },
+      { "id": "ch1", "number": 1, "title": "Chapter 1 - Beginnings" }
+    ],
+    "fields": {
+      "id": { "path": "id" },
+      "number": { "path": "number" },
+      "title": { "path": "title" }
+    }
+  },
+  "pages": {
+    "mode": "simple",
+    "responseType": "static",
+    "items": [
+      "https://picsum.photos/id/1015/900/1350",
+      "https://picsum.photos/id/1016/900/1350",
+      "https://picsum.photos/id/1018/900/1350",
+      "https://picsum.photos/id/1019/900/1350",
+      "https://picsum.photos/id/1022/900/1350"
+    ]
+  }
+}

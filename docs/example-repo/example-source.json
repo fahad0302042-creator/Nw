@@ -1,0 +1,61 @@
+{
+  "id": "example-source",
+  "name": "Example Source",
+  "lang": "en",
+  "version": "1.0.0",
+  "type": "manga",
+  "baseUrl": "https://example.com",
+  "description": "A minimal hand-written example extension manifest, meant to be read alongside docs/EXTENSION_SPEC.md. Uses static data so it works with zero network dependency.",
+  "popular": {
+    "responseType": "static",
+    "items": [
+      { "id": "1", "title": "Example Title", "cover": "https://picsum.photos/id/1025/400/600" }
+    ],
+    "fields": {
+      "id": { "path": "id" },
+      "title": { "path": "title" },
+      "cover": { "path": "cover" }
+    }
+  },
+  "latest": {
+    "responseType": "static",
+    "items": [
+      { "id": "1", "title": "Example Title", "cover": "https://picsum.photos/id/1025/400/600" }
+    ],
+    "fields": {
+      "id": { "path": "id" },
+      "title": { "path": "title" },
+      "cover": { "path": "cover" }
+    }
+  },
+  "search": {
+    "responseType": "static",
+    "items": [
+      { "id": "1", "title": "Example Title", "cover": "https://picsum.photos/id/1025/400/600" }
+    ],
+    "fields": {
+      "id": { "path": "id" },
+      "title": { "path": "title" },
+      "cover": { "path": "cover" }
+    }
+  },
+  "chapters": {
+    "responseType": "static",
+    "items": [
+      { "id": "c1", "number": 1, "title": "Chapter 1" }
+    ],
+    "fields": {
+      "id": { "path": "id" },
+      "number": { "path": "number" },
+      "title": { "path": "title" }
+    }
+  },
+  "pages": {
+    "mode": "simple",
+    "responseType": "static",
+    "items": [
+      "https://picsum.photos/id/1035/900/1350",
+      "https://picsum.photos/id/1036/900/1350"
+    ]
+  }
+}

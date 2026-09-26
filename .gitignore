@@ -1,0 +1,30 @@
+# Flutter/Dart
+.dart_tool/
+.packages
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+pubspec.lock
+
+# Android
+android/local.properties
+android/.gradle/
+android/app/debug
+android/app/profile
+android/app/release
+# gradle-wrapper.jar is a binary bootstrap file; CI downloads/generates it
+# (see .github/workflows/android.yml) instead of committing a binary blob.
+android/gradle/wrapper/gradle-wrapper.jar
+*.jks
+*.keystore
+key.properties
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# macOS
+.DS_Store

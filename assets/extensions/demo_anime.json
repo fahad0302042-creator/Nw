@@ -1,0 +1,79 @@
+{
+  "id": "tsundoku-demo-anime",
+  "name": "Demo Anime (open movies)",
+  "lang": "en",
+  "version": "1.0.0",
+  "type": "anime",
+  "baseUrl": "https://download.blender.org",
+  "icon": "",
+  "description": "A bundled, always-available sample source using freely licensed Blender Foundation open movies, so you can try the player immediately with nothing to configure. Not a real scraper - install a real extension from Extensions > Add repository/URL to stream actual anime.",
+  "headers": {},
+  "popular": {
+    "responseType": "static",
+    "items": [
+      {
+        "id": "demo-anime-1",
+        "title": "Tsundoku Open Movie Night",
+        "cover": "https://picsum.photos/id/1039/400/600",
+        "subtitle": "Demo \u00b7 Creative Commons"
+      }
+    ],
+    "fields": {
+      "id": { "path": "id" },
+      "title": { "path": "title" },
+      "cover": { "path": "cover" },
+      "subtitle": { "path": "subtitle" }
+    }
+  },
+  "latest": {
+    "responseType": "static",
+    "items": [
+      {
+        "id": "demo-anime-1",
+        "title": "Tsundoku Open Movie Night",
+        "cover": "https://picsum.photos/id/1039/400/600",
+        "subtitle": "Demo \u00b7 Creative Commons"
+      }
+    ],
+    "fields": {
+      "id": { "path": "id" },
+      "title": { "path": "title" },
+      "cover": { "path": "cover" },
+      "subtitle": { "path": "subtitle" }
+    }
+  },
+  "search": {
+    "responseType": "static",
+    "items": [
+      {
+        "id": "demo-anime-1",
+        "title": "Tsundoku Open Movie Night",
+        "cover": "https://picsum.photos/id/1039/400/600",
+        "subtitle": "Demo \u00b7 Creative Commons"
+      }
+    ],
+    "fields": {
+      "id": { "path": "id" },
+      "title": { "path": "title" },
+      "cover": { "path": "cover" },
+      "subtitle": { "path": "subtitle" }
+    }
+  },
+  "chapters": {
+    "responseType": "static",
+    "items": [
+      { "id": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4", "number": 1, "title": "Episode 1 - Big Buck Bunny" },
+      { "id": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4", "number": 2, "title": "Episode 2 - For Bigger Blazes" },
+      { "id": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4", "number": 3, "title": "Episode 3 - For Bigger Escapes" }
+    ],
+    "fields": {
+      "id": { "path": "id" },
+      "number": { "path": "number" },
+      "title": { "path": "title" }
+    }
+  },
+  "pages": {
+    "mode": "echo",
+    "urlTemplate": "{url}"
+  }
+}
