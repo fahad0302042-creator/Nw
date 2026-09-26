@@ -21,6 +21,9 @@ repositories provide extensions. What you point it at is up to you.
 | Manga reader: webtoon + paged LTR/RTL, zoom, progress | ✅ |
 | Anime player: HLS + MP4, quality switch, resume | ✅ |
 | Library, history, read state | ✅ |
+| Cloudflare / DDoS-Guard / Sucuri bypass (WebView) | ✅ |
+| Headless JS rendering for client-side sites | ✅ |
+| OLED theming, 7 palettes, grid options | ✅ |
 | Downloads / offline | ⬜ planned |
 | Trackers (AniList, MAL) | ⬜ planned |
 | Backup & restore | ⬜ planned |
@@ -45,7 +48,7 @@ Trade-offs, stated plainly:
 * ✅ Extensions are plain text — inspectable, hot-swappable, no APK install prompts.
 * ✅ Each extension runs in its own isolated JS runtime.
 * ❌ The thousands of existing Keiyoushi/Aniyomi extensions do **not** work as-is.
-* ❌ No Cloudflare-bypass WebView step yet (planned).
+* ✅ Cloudflare/DDoS-Guard checks are solved in a WebView, transparently.
 
 ---
 
@@ -83,6 +86,46 @@ exercise every path in the app.
 
 ---
 
+## Anti-bot handling
+
+Most real sources sit behind Cloudflare. An HTTP client cannot pass its JS
+challenge — it runs WebAssembly, times canvas operations and fingerprints the
+JS environment. So the app does the only thing that reliably works:
+
+1. `AppHttpClient` sends the request with the stored cookie jar and the
+   host-pinned User-Agent.
+2. `ChallengeDetector` recognises an interstitial (`cf-mitigated` header, or a
+   403/503 carrying a challenge HTML body — a 403 with a JSON body is treated
+   as a genuine auth error, not a challenge).
+3. A WebView opens, runs the challenge, and the `cf_clearance` cookie is
+   harvested **together with the WebView's own User-Agent** — clearance is
+   bound to that exact UA, so both must be stored and replayed.
+4. The request is retried once. If it fails again the stale clearance for that
+   host is dropped so the next attempt starts clean.
+
+Solving is **de-duplicated per host**: if twenty page images hit a challenge
+at once, exactly one WebView opens and the other nineteen await it.
+
+Cookies and UA are also injected into cover loading, reader images and video
+streams — a common failure mode is the HTML fetch succeeding while every
+image 403s, because the CDN checks the same clearance.
+
+Manage all of this in **More → Network & browser**: inspect which hosts hold
+clearance, open any site manually to log in ahead of time, or clear
+everything when a source mysteriously stops working.
+
+---
+
+## Appearance
+
+Seven palettes, default **Pure Black** (`#000000`) so OLED pixels are
+physically off. The design uses iOS structural cues — hairline separators,
+frosted translucent chrome, large collapsing titles, Cupertino page
+transitions — with Material 3 underneath. Grid density and cover titles are
+configurable in **More → Appearance**.
+
+---
+
 ## Project layout
 
 ```
@@ -101,7 +144,13 @@ lib/
 │   ├── js_source.dart            MediaSource backed by a JS extension
 │   ├── extension_repository.dart repo index.json fetching
 │   └── extension_manager.dart    install / update / uninstall / load
-├── data/db/app_database.dart     sqflite: items, units, read state
+├── data/
+│   ├── db/app_database.dart      sqflite: items, units, read state
+│   └── net/
+│       ├── cookie_store.dart     per-host cookie jar + pinned User-Agent
+│       ├── cloudflare.dart       challenge detection
+│       ├── app_http_client.dart  cookies + solve + retry, de-duped per host
+│       └── headless_renderer.dart off-screen WebView for JS-rendered pages
 └── features/                     library · browse · details · reader · player · settings
 extensions_repo/                  a working example repository
 docs/EXTENSIONS.md                how to write an extension

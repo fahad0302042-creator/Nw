@@ -1,6 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
+import '../../core/theme.dart';
 import '../../domain/models/media.dart';
 
 /// Cover art with source-specific headers (Referer is often mandatory).
@@ -55,50 +56,55 @@ class MediaGridTile extends StatelessWidget {
     required this.onTap,
     this.headers,
     this.badge,
+    this.showTitle = true,
   });
 
   final MediaItem item;
   final VoidCallback onTap;
   final Map<String, String>? headers;
   final String? badge;
+  final bool showTitle;
 
   @override
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(10),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(10),
         child: Stack(
           fit: StackFit.expand,
           children: [
             CoverImage(url: item.thumbnailUrl, headers: headers),
-            // Scrim so white covers don't swallow the title.
-            const DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.center,
-                  end: Alignment.bottomCenter,
-                  colors: [Colors.transparent, Color(0xCC000000)],
+            if (showTitle) ...[
+              // Scrim so white covers don't swallow the title.
+              const DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.center,
+                    end: Alignment.bottomCenter,
+                    colors: [Colors.transparent, Color(0xD9000000)],
+                  ),
                 ),
               ),
-            ),
-            Positioned(
-              left: 8,
-              right: 8,
-              bottom: 8,
-              child: Text(
-                item.title,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w600,
-                  height: 1.2,
+              Positioned(
+                left: 8,
+                right: 8,
+                bottom: 7,
+                child: Text(
+                  item.title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    height: 1.25,
+                    letterSpacing: -0.1,
+                  ),
                 ),
               ),
-            ),
+            ],
             if (badge != null)
               Positioned(
                 top: 6,
@@ -127,12 +133,26 @@ class MediaGridTile extends StatelessWidget {
   }
 }
 
-const kCoverGridDelegate = SliverGridDelegateWithMaxCrossAxisExtent(
-  maxCrossAxisExtent: 140,
-  childAspectRatio: 0.68,
-  crossAxisSpacing: 8,
-  mainAxisSpacing: 8,
-);
+/// Grid geometry for cover art. [columns] of 0 means "adapt to the screen",
+/// which is what most phones want; a fixed count is available in settings.
+SliverGridDelegate coverGridDelegate(int columns) {
+  const ratio = 0.68; // standard manga/anime cover aspect
+  const spacing = 8.0;
+  if (columns > 0) {
+    return SliverGridDelegateWithFixedCrossAxisCount(
+      crossAxisCount: columns,
+      childAspectRatio: ratio,
+      crossAxisSpacing: spacing,
+      mainAxisSpacing: spacing,
+    );
+  }
+  return const SliverGridDelegateWithMaxCrossAxisExtent(
+    maxCrossAxisExtent: 140,
+    childAspectRatio: ratio,
+    crossAxisSpacing: spacing,
+    mainAxisSpacing: spacing,
+  );
+}
 
 class EmptyState extends StatelessWidget {
   const EmptyState({
@@ -157,7 +177,7 @@ class EmptyState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 56, color: scheme.outline),
+            Icon(icon, size: 44, color: scheme.outline),
             const SizedBox(height: 16),
             Text(title, style: Theme.of(context).textTheme.titleMedium),
             if (message != null) ...[

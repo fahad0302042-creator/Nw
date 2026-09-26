@@ -140,6 +140,44 @@ await el.selectFirst('img')
 Selection happens on the Dart side against the real parsed DOM, so full CSS
 selector support is available and nothing large crosses the bridge.
 
+### `webview` and `cloudflare`
+
+**You usually need neither.** Cloudflare, DDoS-Guard and Sucuri checks are
+handled transparently: any `http.*` call that receives a challenge opens a
+WebView, solves it, stores the `cf_clearance` cookie, and retries once. The
+cookie and the matching User-Agent are then replayed on every later request
+*and* on cover/page/video downloads.
+
+Reach for these only in the two cases the automatic path cannot cover:
+
+```js
+// 1. The page is rendered client-side, so the HTML is an empty shell.
+const doc = await webview.renderDoc(url, { waitFor: '#chapter-list' });
+const rows = await doc.select('#chapter-list li');
+
+// Raw HTML instead of a Document:
+const html = await webview.render(url, { waitFor: '.player', timeout: 45 });
+
+// 2. Warm up clearance before firing a burst of image requests, so twenty
+//    page loads don't each discover the challenge separately.
+await cloudflare.solve(this.baseUrl);
+
+// Hand the current cookie string to something outside the app.
+const cookie = await cloudflare.cookies(videoUrl);
+return [{ url: videoUrl, quality: '1080p', headers: { Cookie: cookie } }];
+```
+
+`webview.render` is **headless** — no UI appears, and images are blocked so
+it is fast. It is for JS-rendered content only; never use it to try to solve
+an interactive challenge, since the user cannot see or touch it.
+
+Skip challenge handling for a single request (useful for API endpoints that
+legitimately return 403):
+
+```js
+await http.get(url, { noChallenge: true, allowError: true });
+```
+
 ### `utils`
 ```js
 await utils.absolute(base, '/relative/path');

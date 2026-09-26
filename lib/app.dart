@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'core/app_keys.dart';
 import 'core/providers.dart';
 import 'core/theme.dart';
+import 'core/theme_controller.dart';
 import 'features/browse/browse_page.dart';
+import 'features/library/history_page.dart';
 import 'features/library/library_page.dart';
 import 'features/settings/settings_page.dart';
-import 'features/library/history_page.dart';
 
 class KurayomiApp extends ConsumerStatefulWidget {
   const KurayomiApp({super.key});
@@ -18,7 +20,6 @@ class _KurayomiAppState extends ConsumerState<KurayomiApp> {
   @override
   void initState() {
     super.initState();
-    // Load installed extensions in the background; the UI is usable meanwhile.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(extensionManagerProvider).init();
     });
@@ -26,12 +27,14 @@ class _KurayomiAppState extends ConsumerState<KurayomiApp> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = ref.watch(themeDataProvider);
+
     return MaterialApp(
       title: 'Kurayomi',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.light(),
-      darkTheme: AppTheme.dark(),
-      themeMode: ThemeMode.dark,
+      // The HTTP layer pushes the Cloudflare challenge screen through this.
+      navigatorKey: rootNavigatorKey,
+      theme: theme,
       home: const RootShell(),
     );
   }
@@ -56,32 +59,43 @@ class _RootShellState extends State<RootShell> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      // extendBody + a frosted bar lets covers scroll under the nav,
+      // the way iOS tab bars behave.
+      extendBody: true,
       body: IndexedStack(index: _index, children: _pages),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _index,
-        onDestinationSelected: (i) => setState(() => _index = i),
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.collections_bookmark_outlined),
-            selectedIcon: Icon(Icons.collections_bookmark),
-            label: 'Library',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.explore_outlined),
-            selectedIcon: Icon(Icons.explore),
-            label: 'Browse',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.history_outlined),
-            selectedIcon: Icon(Icons.history),
-            label: 'History',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.settings_outlined),
-            selectedIcon: Icon(Icons.settings),
-            label: 'More',
-          ),
-        ],
+      bottomNavigationBar: FrostedBar(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Hairline(),
+            NavigationBar(
+              selectedIndex: _index,
+              onDestinationSelected: (i) => setState(() => _index = i),
+              destinations: const [
+                NavigationDestination(
+                  icon: Icon(Icons.book_outlined),
+                  selectedIcon: Icon(Icons.book),
+                  label: 'Library',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.explore_outlined),
+                  selectedIcon: Icon(Icons.explore),
+                  label: 'Browse',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.schedule_outlined),
+                  selectedIcon: Icon(Icons.schedule),
+                  label: 'History',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.more_horiz),
+                  selectedIcon: Icon(Icons.more_horiz),
+                  label: 'More',
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

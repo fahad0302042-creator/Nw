@@ -137,6 +137,37 @@ const String kJsPrelude = r'''
     }
   };
 
+  // ------------------------------------------------------- webview helpers
+  // Cloudflare, DDoS-Guard and Sucuri are handled transparently by the host:
+  // any http.* call that hits a challenge opens a WebView, solves it and
+  // retries. These helpers are for the cases where you need explicit control.
+  globalThis.webview = {
+    // Render a JS-driven page headlessly and get the post-JS DOM.
+    //   const doc = await webview.renderDoc(url, { waitFor: '#chapter-list' });
+    render: function (url, opts) {
+      opts = opts || {};
+      return hostCall('renderJs', {
+        url: url,
+        waitFor: opts.waitFor || null,
+        timeout: opts.timeout || 30
+      });
+    },
+    renderDoc: function (url, opts) {
+      return globalThis.webview.render(url, opts).then(function (html) {
+        return dom.parse(html, url);
+      });
+    }
+  };
+
+  globalThis.cloudflare = {
+    // Warm up clearance before a burst of image/stream requests.
+    solve: function (url, opts) {
+      return hostCall('solveChallenge', { url: url, force: (opts || {}).force === true });
+    },
+    // Current Cookie header for a URL, e.g. to hand to an external player.
+    cookies: function (url) { return hostCall('cookies', { url: url }); }
+  };
+
   // ------------------------------------------------------------------ utils
   globalThis.utils = {
     absolute: function (base, url) { return hostCall('resolve', { base: base, url: url }); },

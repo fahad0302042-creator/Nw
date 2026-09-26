@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/providers.dart';
+import '../../core/theme_controller.dart';
 import '../../domain/models/media.dart';
 import '../../domain/source/media_source.dart';
 import '../common/widgets.dart';
@@ -171,6 +172,8 @@ class _SourcePageState extends ConsumerState<SourcePage> {
   }
 
   Widget _body(MediaSource source) {
+    final appearance = ref.watch(appearanceProvider);
+
     if (_items.isEmpty && _loading) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -187,7 +190,7 @@ class _SourcePageState extends ConsumerState<SourcePage> {
     return GridView.builder(
       controller: _scroll,
       padding: const EdgeInsets.all(12),
-      gridDelegate: kCoverGridDelegate,
+      gridDelegate: coverGridDelegate(appearance.gridColumns),
       // One extra cell carries the loading / error footer.
       itemCount: _items.length + 1,
       itemBuilder: (_, i) {
@@ -215,6 +218,7 @@ class _SourcePageState extends ConsumerState<SourcePage> {
         final item = _items[i];
         return MediaGridTile(
           item: item,
+          showTitle: appearance.showTitles,
           headers: source.mediaHeaders,
           onTap: () => Navigator.push(
             context,

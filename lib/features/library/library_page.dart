@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/providers.dart';
+import '../../core/theme_controller.dart';
 import '../../domain/models/media.dart';
 import '../common/widgets.dart';
 import '../details/details_page.dart';
@@ -95,6 +96,7 @@ class _LibraryGrid extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(libraryProvider(type));
+    final appearance = ref.watch(appearanceProvider);
 
     return async.when(
       loading: () => const Center(child: CircularProgressIndicator()),
@@ -125,12 +127,13 @@ class _LibraryGrid extends ConsumerWidget {
           onRefresh: () async => ref.invalidate(libraryProvider(type)),
           child: GridView.builder(
             padding: const EdgeInsets.all(12),
-            gridDelegate: kCoverGridDelegate,
+            gridDelegate: coverGridDelegate(appearance.gridColumns),
             itemCount: items.length,
             itemBuilder: (_, i) {
               final item = items[i];
               return MediaGridTile(
                 item: item,
+                showTitle: appearance.showTitles,
                 headers: ref
                     .watch(sourceByIdProvider(item.sourceId))
                     ?.mediaHeaders,

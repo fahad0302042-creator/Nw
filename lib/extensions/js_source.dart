@@ -1,3 +1,5 @@
+import '../data/net/app_http_client.dart';
+import '../data/net/cookie_store.dart';
 import '../domain/models/media.dart';
 import '../domain/source/media_source.dart';
 import '../domain/source/source_filter.dart';
@@ -41,10 +43,25 @@ class JsSource implements MediaSource {
   @override
   List<SourceFilter> get filters => _filters;
 
+  /// Headers for covers, page images and video streams.
+  ///
+  /// Referer alone is not enough once a site is behind Cloudflare: the image
+  /// CDN checks the same `cf_clearance` cookie and User-Agent as the HTML
+  /// request, so both are replayed here.
   @override
-  Map<String, String> get mediaHeaders => {
+  Map<String, String> get mediaHeaders {
+    final client = AppHttpClient.current;
+    if (client == null) {
+      return {
+        'User-Agent': CookieStore.defaultUserAgent,
         if (baseUrl.isNotEmpty) 'Referer': '$baseUrl/',
       };
+    }
+    return client.mediaHeadersFor(
+      baseUrl,
+      referer: baseUrl.isNotEmpty ? '$baseUrl/' : null,
+    );
+  }
 
   factory JsSource.fromManifest(
     Map<String, dynamic> m, {

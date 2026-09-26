@@ -1,12 +1,15 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_js/flutter_js.dart';
 import 'package:html/dom.dart' as dom;
 import 'package:html/parser.dart' as html_parser;
 
+import '../data/net/app_http_client.dart';
+import '../data/net/cloudflare.dart';
+import '../data/net/cookie_store.dart';
+import '../data/net/headless_renderer.dart';
 import 'js_prelude.dart';
 
 /// Persisted key/value storage handed to an extension (`utils.store`).
@@ -37,19 +40,10 @@ class JsRuntimeHost {
   JsRuntimeHost({
     required this.extensionId,
     required this.store,
-    Dio? dio,
-  }) : _dio = dio ??
-            Dio(BaseOptions(
-              connectTimeout: const Duration(seconds: 20),
-              receiveTimeout: const Duration(seconds: 30),
-              followRedirects: true,
-              validateStatus: (_) => true,
-              responseType: ResponseType.plain,
-            ));
+  });
 
   final String extensionId;
   final ExtensionStore store;
-  final Dio _dio;
 
   late final JavascriptRuntime _rt;
   Timer? _pump;
@@ -59,10 +53,6 @@ class JsRuntimeHost {
   /// without shipping the whole DOM across the bridge.
   final Map<int, _DocHandle> _docs = {};
   int _docSeq = 0;
-
-  static const _defaultUserAgent =
-      'Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) '
-      'Chrome/124.0.0.0 Mobile Safari/537.36';
 
   final List<String> logs = [];
 
@@ -233,6 +223,32 @@ class JsRuntimeHost {
             Duration(milliseconds: (p['ms'] as num?)?.toInt() ?? 0));
         return null;
 
+      case 'renderJs':
+        // JS-rendered pages: run the site in a headless WebView and take
+        // the resulting DOM.
+        return HeadlessRenderer.render(
+          '${p['url']}',
+          waitForSelector: p['waitFor'] as String?,
+          timeout: Duration(seconds: (p['timeout'] as num?)?.toInt() ?? 30),
+        );
+
+      case 'solveChallenge':
+        // Lets an extension pre-emptively warm up clearance for its host
+        // before firing a burst of image requests.
+        final client = await AppHttpClient.instance();
+        final url = '${p['url']}';
+        if (client.cookies.hasClearance(url) && p['force'] != true) return true;
+        try {
+          await client.request(url);
+          return true;
+        } on ChallengeFailedException {
+          return false;
+        }
+
+      case 'cookies':
+        final client = await AppHttpClient.instance();
+        return client.cookies.cookieHeader('${p['url']}') ?? '';
+
       case 'storeGet':
         return store.get('$extensionId:${p['key']}');
 
@@ -246,9 +262,10 @@ class JsRuntimeHost {
   }
 
   Future<Map<String, dynamic>> _http(Map<String, dynamic> p) async {
+    final client = await AppHttpClient.instance();
     final url = '${p['url']}';
+
     final headers = <String, String>{
-      'User-Agent': _defaultUserAgent,
       ...((p['headers'] as Map?)?.map((k, v) => MapEntry('$k', '$v')) ?? {}),
     };
 
@@ -262,10 +279,14 @@ class JsRuntimeHost {
           'Content-Type', () => 'application/x-www-form-urlencoded');
     }
 
-    final res = await _dio.request<String>(
+    // Cloudflare interception, cookie persistence and the single retry all
+    // happen inside AppHttpClient, so extensions never deal with it.
+    final res = await client.request(
       url,
-      data: body,
-      options: Options(method: '${p['method'] ?? 'GET'}', headers: headers),
+      method: '${p['method'] ?? 'GET'}',
+      headers: headers,
+      body: body,
+      allowChallengeSolving: p['noChallenge'] != true,
     );
 
     return {

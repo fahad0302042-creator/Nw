@@ -1,7 +1,7 @@
 name: kurayomi
 description: A Flutter manga & anime reader with a JavaScript extension runtime.
 publish_to: "none"
-version: 0.1.0+1
+version: 0.2.0+2
 
 environment:
   sdk: ">=3.4.0 <4.0.0"
@@ -20,6 +20,9 @@ dependencies:
   # Networking / parsing
   dio: ^5.5.0
   html: ^0.15.4
+
+  # Cloudflare / DDoS-Guard challenge solving + JS-rendered pages
+  flutter_inappwebview: ^6.1.5
 
   # Storage
   sqflite: ^2.3.3

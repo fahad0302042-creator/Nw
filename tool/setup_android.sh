@@ -3,7 +3,7 @@
 #
 #   1. INTERNET permission (every source needs it)
 #   2. Cleartext HTTP allowed (many sources and CDNs are still http://)
-#   3. minSdk 21 and NDK/desugaring settings required by media_kit
+#   3. minSdk 21 (media_kit) and hardware acceleration (WebView challenges)
 set -euo pipefail
 
 MANIFEST="android/app/src/main/AndroidManifest.xml"
@@ -26,7 +26,9 @@ perms = ('    <uses-permission android:name="android.permission.INTERNET"/>\n'
          '    <uses-permission android:name="android.permission.WAKE_LOCK"/>\n')
 s = s.replace('<manifest', '<manifest', 1)
 s = re.sub(r'(<manifest[^>]*>\n)', r'\1' + perms, s, count=1)
-s = s.replace('<application', '<application\n        android:usesCleartextTraffic="true"', 1)
+s = s.replace('<application',
+              '<application\n        android:usesCleartextTraffic="true"'
+              '\n        android:hardwareAccelerated="true"', 1)
 open(path, 'w').write(s)
 print('patched', path)
 PY
