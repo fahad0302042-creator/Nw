@@ -21,7 +21,14 @@ class RepoService {
   const RepoService();
 
   Future<RepoResult> load(String repoUrl) async {
-    final url = _normalise(repoUrl);
+    final url = normalise(repoUrl);
+
+    // index.pb is the protobuf flavour of the Tachiyomi/Mihon index; there is
+    // nothing useful we could do with it even if it downloaded fine.
+    if (url.toLowerCase().endsWith('.pb')) {
+      throw ExtensionError(apkRepoMessage);
+    }
+
     final text = await Net.fetch(url);
     final dynamic decoded;
     try {
@@ -47,6 +54,10 @@ class RepoService {
       rawSources = list;
     } else {
       throw ExtensionError('Unsupported repository format.');
+    }
+
+    if (looksLikeApkRepo(rawSources)) {
+      throw ExtensionError(apkRepoMessage);
     }
 
     final sources = <SourceManifest>[];
@@ -76,7 +87,12 @@ class RepoService {
     }
 
     if (sources.isEmpty) {
-      throw ExtensionError('No usable sources found in this repository.');
+      throw ExtensionError(
+        'No usable sources found in this repository.\n\n'
+        'The file was valid JSON but no entry contained an "endpoints" block, '
+        'which is what Kuroyomi extensions are made of. Check that this is a '
+        'Kuroyomi format repository (see docs/EXTENSIONS.md).',
+      );
     }
 
     return RepoResult(
@@ -87,7 +103,7 @@ class RepoService {
 
   /// Makes common copy/paste mistakes work: GitHub blob links are rewritten to
   /// their raw equivalent, and a bare repo folder gets `/index.json`.
-  static String _normalise(String input) {
+  static String normalise(String input) {
     var url = input.trim();
     if (url.isEmpty) return url;
     if (!url.startsWith('http')) url = 'https://$url';
@@ -96,11 +112,46 @@ class RepoService {
           .replaceFirst('github.com', 'raw.githubusercontent.com')
           .replaceFirst('/blob/', '/');
     }
-    if (!url.toLowerCase().endsWith('.json')) {
+
+    // Only append index.json when the url points at a directory. Previously
+    // any url not ending in ".json" got "/index.json" glued on, which mangled
+    // links such as ".../repo/index.pb" into ".../index.pb/index.json".
+    final uri = Uri.tryParse(url);
+    final segments =
+        uri?.pathSegments.where((segment) => segment.isNotEmpty).toList() ??
+            const <String>[];
+    final last = segments.isEmpty ? '' : segments.last;
+    final looksLikeFile = last.contains('.');
+    if (!looksLikeFile) {
       url = url.endsWith('/') ? '${url}index.json' : '$url/index.json';
     }
     return url;
   }
+
+  /// True when the payload is a Tachiyomi / Mihon style extension index.
+  ///
+  /// Those repositories list **compiled Android APKs**, which Kuroyomi cannot
+  /// execute, so we detect them to show a useful message instead of a vague
+  /// parse error.
+  static bool looksLikeApkRepo(List<dynamic> entries) {
+    for (final entry in entries.take(8)) {
+      if (entry is! Map) continue;
+      if (entry.containsKey('apk') ||
+          entry.containsKey('pkg') ||
+          entry.containsKey('class')) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  static const String apkRepoMessage =
+      'This is a Tachiyomi / Mihon extension repository (Keiyoushi and friends).\n\n'
+      'Those extensions are compiled Android APKs containing Kotlin code, so no '
+      'other app can execute them — Kuroyomi uses declarative JSON extensions '
+      'instead.\n\n'
+      'Use a Kuroyomi format repository, or write one: see docs/EXTENSIONS.md '
+      'in the project repo.';
 
   static String _parentOf(String url) {
     final index = url.lastIndexOf('/');

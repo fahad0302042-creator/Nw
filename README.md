@@ -46,6 +46,24 @@ player — works on your device before pointing the app at any real site.
 
 ---
 
+## Can I use Tachiyomi / Mihon / Keiyoushi extensions?
+
+**No, and no app other than a Mihon fork can.** It is worth understanding why, because it is a hard
+technical wall rather than a missing feature:
+
+* A Tachiyomi/Mihon extension is a **compiled Android APK** containing Kotlin classes that subclass
+  Mihon's `HttpSource` API. Running one means loading foreign Dalvik bytecode with `DexClassLoader`
+  and providing the entire host-app API surface it links against (network helpers, preference store,
+  DI container, the `SManga`/`SChapter`/`Page` model classes …).
+* Flutter apps have no Kotlin extension host, so those APKs are simply not loadable here.
+* Repositories like `keiyoushi/extensions` publish `index.min.json` / `index.pb`, which are just
+  **catalogues of APK files** — there is no scraping logic in the JSON at all, so there is nothing
+  for Kuroyomi to interpret.
+
+Kuroyomi therefore defines its own **JSON extension format**: the scraping logic lives in the JSON
+itself as selectors and paths, no code execution required. Pasting a Keiyoushi url now shows an
+explanation instead of a confusing 404.
+
 ## Writing extensions
 
 See **[docs/EXTENSIONS.md](docs/EXTENSIONS.md)** for the full schema, plus HTML and JSON examples.
