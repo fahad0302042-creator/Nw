@@ -19,6 +19,10 @@ import sys
 AGP_PIN = '8.11.1'
 GRADLE_PIN = '8.14.3'
 
+# flutter_local_notifications schedules with java.time APIs, which need
+# core library desugaring on minSdk < 26.
+DESUGAR_LIB = 'com.android.tools:desugar_jdk_libs:2.1.4'
+
 PERMISSIONS = [
     'android.permission.INTERNET',
     'android.permission.WAKE_LOCK',
@@ -74,6 +78,68 @@ def patch_min_sdk() -> None:
         return
 
 
+def patch_desugaring() -> None:
+    """Enables core library desugaring, required by flutter_local_notifications."""
+    kts = pathlib.Path('android/app/build.gradle.kts')
+    groovy = pathlib.Path('android/app/build.gradle')
+
+    if kts.exists():
+        s = kts.read_text()
+        changed = []
+
+        if 'isCoreLibraryDesugaringEnabled' not in s:
+            if 'compileOptions {' in s:
+                s = s.replace(
+                    'compileOptions {',
+                    'compileOptions {\n        isCoreLibraryDesugaringEnabled = true',
+                    1,
+                )
+            else:
+                # No compileOptions block in this template: add one.
+                s = s.replace(
+                    'android {',
+                    'android {\n    compileOptions {\n'
+                    '        isCoreLibraryDesugaringEnabled = true\n'
+                    '        sourceCompatibility = JavaVersion.VERSION_11\n'
+                    '        targetCompatibility = JavaVersion.VERSION_11\n'
+                    '    }',
+                    1,
+                )
+            changed.append('compileOptions')
+
+        if 'coreLibraryDesugaring' not in s:
+            s = s.rstrip() + (
+                '\n\ndependencies {\n'
+                f'    coreLibraryDesugaring("{DESUGAR_LIB}")\n'
+                '}\n'
+            )
+            changed.append('desugar dependency')
+
+        kts.write_text(s)
+        print('   desugaring: ' + (', '.join(changed) if changed else 'already enabled'))
+        return
+
+    if groovy.exists():
+        s = groovy.read_text()
+        changed = []
+        if 'coreLibraryDesugaringEnabled' not in s:
+            s = s.replace('compileOptions {',
+                          'compileOptions {\n        coreLibraryDesugaringEnabled true', 1)
+            changed.append('compileOptions')
+        if 'coreLibraryDesugaring ' not in s:
+            s = s.rstrip() + (
+                "\n\ndependencies {\n"
+                f"    coreLibraryDesugaring '{DESUGAR_LIB}'\n"
+                "}\n"
+            )
+            changed.append('desugar dependency')
+        groovy.write_text(s)
+        print('   desugaring: ' + (', '.join(changed) if changed else 'already enabled'))
+        return
+
+    print('   no app build.gradle found, skipping desugaring')
+
+
 def patch_agp() -> None:
     settings = pathlib.Path('android/settings.gradle.kts')
     if not settings.exists():
@@ -118,6 +184,7 @@ def patch_agp() -> None:
 def main() -> None:
     patch_manifest()
     patch_min_sdk()
+    patch_desugaring()
     patch_agp()
 
 
