@@ -29,8 +29,8 @@ installable **debug APK** as an artifact.
 | Cloudflare / DDoS-Guard / Sucuri bypass (WebView) | ✅ |
 | Headless JS rendering for client-side sites | ✅ |
 | OLED theming, 7 palettes, grid options | ✅ |
-| CI: analyze + 34 unit tests + 13 runtime tests + APK build | ✅ |
-| Downloads / offline | ⬜ planned |
+| CI: analyze + 59 unit tests + 13 runtime tests + APK build | ✅ |
+| Downloads: offline chapters & episodes | ✅ |
 | Trackers (AniList, MAL) | ⬜ planned |
 | Backup & restore | ⬜ planned |
 
@@ -87,6 +87,34 @@ Then in the app: **Browse → Extensions → Repositories → +** and add
 Install *Sample Manga (Demo)* and *Sample Anime (Demo)*. The manga source is
 fully offline; the anime source plays real public test streams. Together they
 exercise every path in the app.
+
+---
+
+## Downloads
+
+Tap the download icon on any chapter or episode, or use **Download next
+1 / 5 / 10 / all** from the title screen. Queued work is persisted, so an app
+killed mid-download resumes rather than forgetting.
+
+- Two units download at once, three pages in parallel within a chapter.
+  Sources rate-limit hard, and a 50-way parallel fetch is the fastest route
+  to a temporary IP ban.
+- Every file is written to `.part` and renamed on success, and the folder
+  only gets its `.complete` marker last — so a chapter interrupted by a
+  crash can never be mistaken for a finished one and read as truncated.
+- Downloads reuse the normal HTTP client, so they carry Cloudflare clearance
+  and cookies like any other request.
+- Already-downloaded pages are skipped on retry.
+
+**Anime:** progressive MP4 downloads directly. HLS is parsed, the
+highest-bandwidth rendition selected, and segments concatenated in order
+(including `EXT-X-MAP` init segments). **Encrypted HLS is refused up front**
+with a clear message rather than writing a file you would only discover is
+unplayable once offline.
+
+Once downloaded, the reader and player read straight from disk — no network,
+and not even a source lookup. Manage everything in **More → Downloads**:
+queue, progress, space used, and per-item deletion.
 
 ---
 

@@ -21,7 +21,7 @@ Every push is compiled on GitHub Actions. The last green run:
 | Flutter | 3.47.5 stable |
 | JDK | 17 |
 | AGP / Gradle | 8.11.1 / 8.14.3 (pinned by `tool/android_patch.py`) |
-| Result | analyze clean · 34 unit tests + 13 runtime tests pass · `app-debug.apk` built |
+| Result | analyze clean · 59 unit tests + 13 runtime tests pass · `app-debug.apk` built |
 
 The debug APK is attached to each successful run as the
 **`kurayomi-debug-apk`** artifact — you can download and install it without
@@ -212,7 +212,7 @@ Run `flutter analyze` and paste the output — the lint set in
 
 ```bash
 flutter analyze                 # Dart
-flutter test                    # 34 unit tests
+flutter test                    # 59 unit tests
 node tool/test_runtime.js       # 13 JS runtime contract tests, no SDK needed
 ```
 
