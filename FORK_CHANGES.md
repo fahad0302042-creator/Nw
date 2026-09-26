@@ -18,7 +18,7 @@ clean light surfaces, iOS system palette, big rounded corners, left navigation r
 
 | Change | Files | Notes |
 |---|---|---|
-| **Left side nav rail always on** (no bottom bar) | `app/src/main/java/eu/kanade/tachiyomi/ui/home/HomeScreen.kt` | The rail already existed for tablets (`isTabletUi()`); the gate was removed and the bottom bar deleted. `HomeScreen.showBottomNav()` kept as a no-op so player/reader calls don't break. |
+| **Floating rounded bottom nav tray** | `app/src/main/java/eu/kanade/tachiyomi/ui/home/HomeScreen.kt` | Bottom navigation as a floating pill tray (rounded 28dp, elevation, slide+fade on hide) instead of an edge-to-edge bar. `HomeScreen.showBottomNav()` still hides it when requested. |
 | **New "Nw" theme** (iOS palette) | `presentation/theme/colorscheme/NwColorScheme.kt`, `domain/ui/model/AppTheme.kt`, `presentation/theme/TachiyomiTheme.kt`, `i18n-aniyomi/.../base/strings.xml` | Light: #F2F2F7 background, #007AFF blue. Dark: true black + #0A84FF. Registered as `AppTheme.NW` and set as the default in `UiPreferences.appTheme()`. |
 | **iOS-style corner radii app-wide** | `presentation/theme/TachiyomiTheme.kt` | `NwShapes`: 10/14/16/20/28dp. Affects every Material component. |
 | **Home tab (new)** | `ui/feed/FeedTab.kt`, `ui/feed/FeedScreenModel.kt`, `presentation/feed/FeedScreen.kt`, `domain/ui/model/NavStyle.kt`, `domain/ui/model/StartScreen.kt` | "Continue Watching" (from history) + "New Episodes" (from updates, last 30 days) horizontal cards. Read-only: reuses `GetAnimeHistory` / `GetAnimeUpdates`, creates no new data. Default start screen for fresh installs. |
