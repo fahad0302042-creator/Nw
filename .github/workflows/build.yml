@@ -52,7 +52,7 @@ jobs:
             -f conclusion="failure" \
             -f 'output[title]=Gradle build failed — tail of build.log' \
             -f 'output[summary]=Automated error report so failures are readable without log download.' \
-            -f 'output[text]=$(head -c 55000 /tmp/tail.txt)'
+            -f "output[text]=$(head -c 55000 /tmp/tail.txt)"
 
       - name: Collect APKs
         if: success()
