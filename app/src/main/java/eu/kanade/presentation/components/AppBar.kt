@@ -193,6 +193,7 @@ fun AppBarTitle(
                     text = it,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
+                    fontWeight = FontWeight.SemiBold,
                 )
             }
             subtitle?.let {

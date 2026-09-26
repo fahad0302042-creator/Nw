@@ -136,8 +136,8 @@ fun AnimeInfoBox(
                         brush = Brush.verticalGradient(colors = backdropGradientColors),
                     )
                 }
-                .blur(4.dp)
-                .alpha(0.2f),
+                .blur(12.dp)
+                .alpha(0.3f),
         )
 
         // Anime & source info
