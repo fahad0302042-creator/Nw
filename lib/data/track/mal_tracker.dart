@@ -28,6 +28,9 @@ class MalTracker implements Tracker {
   TrackerId get id => TrackerId.myanimelist;
 
   @override
+  String get name => id.label;
+
+  @override
   bool get isLoggedIn => _tokens.accessToken(id) != null;
 
   @override

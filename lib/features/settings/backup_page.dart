@@ -72,6 +72,7 @@ class _BackupPageState extends ConsumerState<BackupPage> {
       if (problem != null) throw FormatException(problem);
 
       final count = (data['items'] as List).length;
+      if (!mounted) return;
       final confirmed = await showDialog<bool>(
         context: context,
         builder: (_) => AlertDialog(

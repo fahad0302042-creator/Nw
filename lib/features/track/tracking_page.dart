@@ -154,7 +154,7 @@ class _TrackerTile extends ConsumerWidget {
               : 'Sign-in cancelled'),
         ));
       }
-      ref.read(trackingServiceProvider).notifyListeners();
+      ref.read(trackingServiceProvider).refreshState();
     } on TrackerAuthException catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context)

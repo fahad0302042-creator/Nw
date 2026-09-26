@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/providers.dart';
 import '../../core/theme.dart';
-import '../../domain/models/category.dart';
 import '../common/widgets.dart';
 
 class CategoriesPage extends ConsumerWidget {
@@ -146,10 +145,11 @@ class _CategoryPickerSheetState extends ConsumerState<CategoryPickerSheet> {
 
   Future<void> _load() async {
     final ids = await ref.read(databaseProvider).categoriesForItem(widget.itemId);
-    if (mounted) setState(() {
-          _selected = ids.toSet();
-          _loaded = true;
-        });
+    if (!mounted) return;
+    setState(() {
+      _selected = ids.toSet();
+      _loaded = true;
+    });
   }
 
   @override

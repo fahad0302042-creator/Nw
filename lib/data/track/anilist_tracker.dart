@@ -25,6 +25,9 @@ class AniListTracker implements Tracker {
   TrackerId get id => TrackerId.anilist;
 
   @override
+  String get name => id.label;
+
+  @override
   bool get isLoggedIn => _tokens.accessToken(id) != null;
 
   @override

@@ -4,7 +4,6 @@ import 'dart:io';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
-import '../../domain/models/category.dart';
 import '../../domain/models/media.dart';
 import '../../domain/models/track.dart';
 import '../db/app_database.dart';

@@ -35,6 +35,10 @@ class TrackingService extends ChangeNotifier {
 
   Future<List<TrackLink>> linksFor(int itemId) => db.trackLinks(itemId);
 
+  /// Rebuilds listeners after login state changes outside this class
+  /// (the OAuth screen owns that flow).
+  void refreshState() => notifyListeners();
+
   Future<void> link(int itemId, TrackLink link) async {
     await db.upsertTrackLink(link.copyWith(itemId: itemId));
     notifyListeners();
