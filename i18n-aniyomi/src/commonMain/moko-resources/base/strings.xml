@@ -612,4 +612,11 @@
     <string name="pref_download_fillermarked_items">Allow downloading of fillermarked episodes</string>
     <string name="show_episode_previews">Episode thumbnails</string>
     <string name="show_episode_summaries">Episode summaries</string>
+    <!-- Nw fork -->
+    <string name="theme_nw" translatable="false">Nw</string>
+    <string name="label_home_feed">Home</string>
+    <string name="feed_continue_watching">Continue Watching</string>
+    <string name="feed_new_episodes">New Episodes</string>
+    <string name="feed_up_next">Up next · EP %1$s</string>
+    <string name="feed_empty_home">Watch something and it will show up here</string>
 </resources>

@@ -1,0 +1,48 @@
+name: Build Nw APK
+
+on:
+  push:
+    branches:
+      - '**'
+  workflow_dispatch:
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build signed APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Clone repo
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK
+        uses: actions/setup-java@3a4f6e1af504cf6a31855fa899c6aa5355ba6c12 # v4.7.0
+        with:
+          java-version: 17
+          distribution: temurin
+
+      - name: Set up gradle
+        uses: gradle/actions/setup-gradle@94baf225fe0a508e581a564467443d0e2379123b # v4.3.0
+
+      - name: Build release APK (signed with repo keystore)
+        run: ./gradlew assembleRelease
+
+      - name: Collect APKs
+        run: |
+          cd app/build/outputs/apk/release
+          mv app-universal-release.apk Nw-universal.apk
+          mv app-arm64-v8a-release.apk Nw-arm64-v8a.apk
+
+      - name: Upload APK
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: Nw-APK-${{ github.sha }}
+          path: |
+            app/build/outputs/apk/release/Nw-universal.apk
+            app/build/outputs/apk/release/Nw-arm64-v8a.apk

@@ -17,10 +17,11 @@ android {
     namespace = "eu.kanade.tachiyomi"
 
     defaultConfig {
-        applicationId = "xyz.jmir.tachiyomi.mi"
+        applicationId = "io.github.fahad0302042.nw"
 
-        versionCode = 132
-        versionName = "0.18.2.1"
+        // Nw fork: version auto-bumps from commit count
+        versionCode = getCommitCount().toInt()
+        versionName = "1.0.0"
 
         buildConfigField("String", "COMMIT_COUNT", "\"${getCommitCount()}\"")
         buildConfigField("String", "COMMIT_SHA", "\"${getGitSha()}\"")
@@ -42,6 +43,24 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    // Nw fork: stable release signing from committed keystore (see FORK_CHANGES.md)
+    signingConfigs {
+        val keystoreFile = rootProject.file("keystore/nw-release.jks")
+        val keystorePropertiesFile = rootProject.file("keystore/keystore.properties")
+        if (keystoreFile.exists() && keystorePropertiesFile.exists()) {
+            val keystoreProperties = java.util.Properties().apply {
+                keystorePropertiesFile.inputStream().use { load(it) }
+            }
+            create("nw") {
+                storeFile = keystoreFile
+                storeType = "PKCS12"
+                storePassword = keystoreProperties.getProperty("storePassword")
+                keyAlias = keystoreProperties.getProperty("alias")
+                keyPassword = keystoreProperties.getProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         val debug by getting {
             applicationIdSuffix = ".dev"
@@ -49,6 +68,8 @@ android {
             isPseudoLocalesEnabled = true
         }
         val release by getting {
+            signingConfig = signingConfigs.findByName("nw")
+
             isMinifyEnabled = Config.enableCodeShrink
             isShrinkResources = Config.enableCodeShrink
 
