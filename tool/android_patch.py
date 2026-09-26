@@ -8,12 +8,16 @@ import pathlib
 import re
 import sys
 
-# AGP 9 removed getDefaultProguardFile('proguard-android.txt'), which
-# flutter_inappwebview_android still calls in its released build.gradle.
-# Fixed upstream but not yet in a stable release, so pin to the last AGP
-# that accepts it, with a Gradle distribution that matches.
-AGP_PIN = '8.7.3'
-GRADLE_PIN = '8.9'
+# AGP 9 removed getDefaultProguardFile('proguard-android.txt'), which the
+# released flutter_inappwebview_android still calls (fixed upstream, not yet
+# in a stable release). AGP 9 also switches on the new DSL, which the current
+# Flutter Gradle plugin cannot apply.
+#
+# So pin to the newest AGP 8.x line, which accepts both. The Gradle pin must
+# stay at or above Flutter's own minimum (8.14 as of Flutter 3.47) or the
+# Flutter Gradle plugin refuses to load.
+AGP_PIN = '8.11.1'
+GRADLE_PIN = '8.14.3'
 
 PERMISSIONS = [
     'android.permission.INTERNET',

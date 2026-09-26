@@ -5,6 +5,7 @@
 /// "unit of consumption" (`MediaUnit`) covers both a manga chapter and an
 /// anime episode. This keeps library, history, downloads and tracking code
 /// written exactly once instead of twice.
+library;
 
 enum MediaType { manga, anime }
 
