@@ -1,0 +1,23 @@
+{
+  "name": "Kurayomi Example Repo",
+  "extensions": [
+    {
+      "id": "en.sampleManga",
+      "name": "Sample Manga (Demo)",
+      "version": "1.0.0",
+      "lang": "en",
+      "type": "manga",
+      "code": "src/en.sampleManga/index.js",
+      "description": "A working, offline demo manga source. Use it as a template."
+    },
+    {
+      "id": "en.sampleAnime",
+      "name": "Sample Anime (Demo)",
+      "version": "1.0.0",
+      "lang": "en",
+      "type": "anime",
+      "code": "src/en.sampleAnime/index.js",
+      "description": "A working demo anime source backed by public test streams."
+    }
+  ]
+}
