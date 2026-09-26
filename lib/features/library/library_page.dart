@@ -32,6 +32,14 @@ class _LibraryPageState extends ConsumerState<LibraryPage>
         title: const Text('Library'),
         bottom: TabBar(
           controller: _tabs,
+          isScrollable: true,
+          tabAlignment: TabAlignment.start,
+          indicatorSize: TabBarIndicatorSize.label,
+          dividerColor: Colors.transparent,
+          labelStyle:
+              const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+          unselectedLabelStyle:
+              const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
           tabs: const [Tab(text: 'Manga'), Tab(text: 'Anime')],
         ),
         actions: [

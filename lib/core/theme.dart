@@ -137,15 +137,6 @@ class AppTheme {
         subtitleTextStyle: TextStyle(fontSize: 13, color: muted),
       ),
 
-      tabBarTheme: TabBarThemeData(
-        labelColor: onBg,
-        unselectedLabelColor: muted,
-        indicatorColor: accent,
-        indicatorSize: TabBarIndicatorSize.label,
-        dividerColor: Colors.transparent,
-        labelStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-      ),
-
       chipTheme: ChipThemeData(
         backgroundColor: surfaceHigh,
         side: BorderSide.none,

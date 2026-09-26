@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/providers.dart';
+import '../../domain/models/media.dart';
 import '../common/widgets.dart';
 import '../details/details_page.dart';
 

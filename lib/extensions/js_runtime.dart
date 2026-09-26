@@ -8,7 +8,6 @@ import 'package:html/parser.dart' as html_parser;
 
 import '../data/net/app_http_client.dart';
 import '../data/net/cloudflare.dart';
-import '../data/net/cookie_store.dart';
 import '../data/net/headless_renderer.dart';
 import 'js_prelude.dart';
 

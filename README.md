@@ -55,18 +55,16 @@ Trade-offs, stated plainly:
 ## Getting started
 
 ```bash
-# 1. Generate the Android platform folder (this repo only holds Dart + assets)
-flutter create . --platforms=android --org com.example --project-name kurayomi
-
-# 2. Restore the pieces flutter create overwrites
-bash tool/setup_android.sh
-
-# 3. Run
-flutter pub get
+bash tool/bootstrap.sh    # generates android/, patches the manifest, pub get
 flutter run
 ```
 
-Requires Flutter **3.24+** / Dart 3.4+.
+Requires **Flutter 3.24+**, **JDK 17** and the Android SDK.
+Full instructions and troubleshooting: **[docs/BUILD.md](docs/BUILD.md)**.
+
+The `android/` folder is generated rather than committed, so it always
+matches your own Flutter SDK. `bootstrap.sh` is idempotent — re-run it
+whenever you like.
 
 ### Try it immediately
 
@@ -154,6 +152,8 @@ lib/
 └── features/                     library · browse · details · reader · player · settings
 extensions_repo/                  a working example repository
 docs/EXTENSIONS.md                how to write an extension
+docs/BUILD.md                     build, run and troubleshooting
+tool/bootstrap.sh                 one-command environment setup
 ```
 
 ---

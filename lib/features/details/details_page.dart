@@ -235,11 +235,9 @@ class _DetailsPageState extends ConsumerState<DetailsPage> {
                 onPressed: _item.id == null
                     ? null
                     : () async {
-                        await ref
-                            .read(databaseProvider)
-                            .markAllRead(_item.id!, true);
-                        final u =
-                            await ref.read(databaseProvider).units(_item.id!);
+                        final db = ref.read(databaseProvider);
+                        await db.markAllRead(_item.id!, true);
+                        final u = await db.units(_item.id!);
                         if (mounted) setState(() => _units = u);
                       },
               ),
@@ -325,14 +323,12 @@ class _DetailsPageState extends ConsumerState<DetailsPage> {
           size: 20,
           color: u.read ? scheme.primary : scheme.outline,
         ),
-        onPressed: u.id == null
+        onPressed: (u.id == null || _item.id == null)
             ? null
             : () async {
-                await ref
-                    .read(databaseProvider)
-                    .setProgress(u.id!, read: !u.read);
-                final refreshed =
-                    await ref.read(databaseProvider).units(_item.id!);
+                final db = ref.read(databaseProvider);
+                await db.setProgress(u.id!, read: !u.read);
+                final refreshed = await db.units(_item.id!);
                 if (mounted) setState(() => _units = refreshed);
               },
       ),

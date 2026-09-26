@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -91,6 +92,10 @@ class ExtensionManager extends ChangeNotifier {
       }
     }
     notifyListeners();
+
+    // Refresh catalogues in the background: installed extensions already
+    // work offline, so this must never block first paint.
+    if (_repoUrls.isNotEmpty) unawaited(refreshRepos());
   }
 
   Future<Directory> _dir() async {
