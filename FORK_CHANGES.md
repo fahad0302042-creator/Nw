@@ -24,6 +24,7 @@ clean light surfaces, iOS system palette, big rounded corners, left navigation r
 | **Home tab (new)** | `ui/feed/FeedTab.kt`, `ui/feed/FeedScreenModel.kt`, `presentation/feed/FeedScreen.kt`, `domain/ui/model/NavStyle.kt`, `domain/ui/model/StartScreen.kt` | "Continue Watching" (from history) + "New Episodes" (from updates, last 30 days) horizontal cards. Read-only: reuses `GetAnimeHistory` / `GetAnimeUpdates`, creates no new data. Default start screen for fresh installs. |
 | **App renamed to "Nw"** | `i18n/.../base/strings.xml` (`app_name`) | |
 | **Own app identity** | `app/build.gradle.kts` | `applicationId = io.github.fahad0302042.nw` (installs alongside the real Aniyomi), `versionCode = getCommitCount()` (auto-bumps), `versionName = 1.0.0`. |
+| **Pill search bar** | `presentation/components/AppBar.kt` (`SearchToolbar`) | Active search is a rounded pill field with leading icon — Yōkai/Kotatsu-style floating search, applied to every searchable screen at once. |
 | **Pill category tabs** | `presentation/library/components/LibraryTabs.kt` | Library categories are scrolling iOS-style pills instead of Material underline tabs (applies to anime + manga libraries). |
 | **Semibold titles app-wide** | `presentation/components/AppBar.kt` | Every screen's header title is semibold (Inter). |
 | **Stronger cover-tinted detail backdrop** | `AnimeInfoHeader.kt`, `MangaInfoHeader.kt` | Blurred cover backdrop raised from 20%/4dp to 30%/12dp blur — detail screens feel tinted by their cover (Yōkai-style). |

@@ -76,7 +76,7 @@ fun MoreScreen(
                     )
                     SettingsGroupCardDivider()
                     SwitchPreferenceWidget(
-                        title = stringResource(AYMR.strings.pref_incognito_mode),
+                        title = stringResource(MR.strings.pref_incognito_mode),
                         subtitle = stringResource(AYMR.strings.pref_incognito_mode_summary),
                         icon = ImageVector.vectorResource(R.drawable.ic_glasses_24dp),
                         checked = incognitoMode,

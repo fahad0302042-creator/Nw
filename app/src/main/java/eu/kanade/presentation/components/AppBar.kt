@@ -21,6 +21,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldDefaults
@@ -339,31 +340,53 @@ fun SearchToolbar(
                 visualTransformation = visualTransformation,
                 interactionSource = interactionSource,
                 decorationBox = { innerTextField ->
-                    TextFieldDefaults.DecorationBox(
-                        value = searchQuery,
-                        innerTextField = innerTextField,
-                        enabled = true,
-                        singleLine = true,
-                        visualTransformation = visualTransformation,
-                        interactionSource = interactionSource,
-                        placeholder = {
-                            Text(
-                                modifier = Modifier.secondaryItemAlpha(),
-                                text = (
-                                    placeholderText ?: stringResource(
-                                        MR.strings.action_search_hint,
+                    // Nw fork: pill-shaped floating search field (Yōkai/Kotatsu style)
+                    Surface(
+                        shape = MaterialTheme.shapes.extraLarge,
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                    ) {
+                        Box(
+                            modifier = Modifier.padding(
+                                start = 14.dp,
+                                top = 6.dp,
+                                bottom = 6.dp,
+                                end = 10.dp,
+                            ),
+                        ) {
+                            TextFieldDefaults.DecorationBox(
+                                value = searchQuery,
+                                innerTextField = innerTextField,
+                                enabled = true,
+                                singleLine = true,
+                                visualTransformation = visualTransformation,
+                                interactionSource = interactionSource,
+                                placeholder = {
+                                    Text(
+                                        modifier = Modifier.secondaryItemAlpha(),
+                                        text = (
+                                            placeholderText ?: stringResource(
+                                                MR.strings.action_search_hint,
+                                            )
+                                            ),
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        style = MaterialTheme.typography.titleMedium.copy(
+                                            fontSize = 18.sp,
+                                            fontWeight = FontWeight.Normal,
+                                        ),
                                     )
-                                    ),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                style = MaterialTheme.typography.titleMedium.copy(
-                                    fontSize = 18.sp,
-                                    fontWeight = FontWeight.Normal,
-                                ),
+                                },
+                                leadingIcon = {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Search,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                },
+                                container = {},
                             )
-                        },
-                        container = {},
-                    )
+                        }
+                    }
                 },
             )
         },
