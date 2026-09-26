@@ -10,6 +10,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../domain/source/media_source.dart';
 import 'extension.dart';
 import 'extension_repository.dart';
+import 'repo_url.dart';
 import 'js_runtime.dart';
 import 'js_source.dart';
 
@@ -120,7 +121,9 @@ class ExtensionManager extends ChangeNotifier {
   // ------------------------------------------------------------------ repos
 
   Future<void> addRepo(String indexUrl) async {
-    final url = indexUrl.trim();
+    // Normalise first so the stored URL is the one that actually works,
+    // not the GitHub page the user copied.
+    final url = RepoUrl.normalize(indexUrl);
     if (url.isEmpty || _repoUrls.contains(url)) return;
     // Validate before persisting so a typo doesn't stick around.
     final index = await _repo.fetchIndex(url);

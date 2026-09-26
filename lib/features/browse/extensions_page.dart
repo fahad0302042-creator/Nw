@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/providers.dart';
+import '../../extensions/extension_repository.dart';
 import '../../domain/models/media.dart';
 import '../../extensions/extension.dart';
 import '../common/widgets.dart';
@@ -190,13 +191,29 @@ class _ReposPageState extends ConsumerState<ReposPage> {
       context: context,
       builder: (_) => AlertDialog(
         title: const Text('Add repository'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          keyboardType: TextInputType.url,
-          decoration: const InputDecoration(
-            hintText: 'https://example.com/repo/index.json',
-          ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            TextField(
+              controller: controller,
+              autofocus: true,
+              keyboardType: TextInputType.url,
+              decoration: const InputDecoration(
+                hintText: 'https://example.com/repo/index.json',
+              ),
+            ),
+            const SizedBox(height: 14),
+            const Text(
+              'The URL must point at an index.json file listing JavaScript '
+              'extensions.\n\n'
+              'A GitHub page link is fixed up automatically, and a folder URL '
+              'gets /index.json appended.\n\n'
+              'Keiyoushi and Aniyomi .apk repositories will not work — those '
+              'extensions are compiled Android code.',
+              style: TextStyle(fontSize: 12, height: 1.45),
+            ),
+          ],
         ),
         actions: [
           TextButton(
@@ -216,9 +233,25 @@ class _ReposPageState extends ConsumerState<ReposPage> {
     try {
       await ref.read(extensionManagerProvider).addRepo(url);
     } catch (e) {
+      // These messages are written to be read — a snackbar would clip them.
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not add repository: $e')),
+        await showDialog<void>(
+          context: context,
+          builder: (_) => AlertDialog(
+            title: const Text('Could not add repository'),
+            content: SingleChildScrollView(
+              child: Text(
+                e is RepoException ? e.message : '$e',
+                style: const TextStyle(fontSize: 13.5, height: 1.45),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
         );
       }
     } finally {
