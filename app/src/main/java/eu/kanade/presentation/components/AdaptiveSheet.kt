@@ -14,6 +14,7 @@ import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.Navigator
 import eu.kanade.presentation.util.ScreenTransition
 import eu.kanade.presentation.util.isTabletUi
+import eu.kanade.presentation.util.isTvUi
 import tachiyomi.presentation.core.components.AdaptiveSheet as AdaptiveSheetImpl
 
 @OptIn(InternalVoyagerApi::class)
@@ -66,7 +67,8 @@ fun AdaptiveSheet(
     enableImplicitDismiss: Boolean = true,
     content: @Composable () -> Unit,
 ) {
-    val isTabletUi = isTabletUi()
+    // TV: always use the centered layout; swipe-to-dismiss doesn't exist with a remote
+    val isTabletUi = isTabletUi() || isTvUi()
 
     Dialog(
         onDismissRequest = onDismissRequest,

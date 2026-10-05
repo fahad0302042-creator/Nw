@@ -36,6 +36,7 @@ import cafe.adriel.voyager.navigator.tab.TabNavigator
 import eu.kanade.domain.source.service.SourcePreferences
 import eu.kanade.presentation.util.Screen
 import eu.kanade.presentation.util.isTabletUi
+import eu.kanade.presentation.util.isTvUi
 import eu.kanade.tachiyomi.ui.browse.BrowseTab
 import eu.kanade.tachiyomi.ui.download.DownloadQueueScreen
 import eu.kanade.tachiyomi.ui.history.HistoryTab
@@ -88,9 +89,12 @@ object HomeScreen : Screen() {
         ) { tabNavigator ->
             // Provide usable navigator to content screen
             CompositionLocalProvider(LocalNavigator provides navigator) {
+                val isTelevisionUi = isTvUi()
                 Scaffold(
                     startBar = {
-                        if (isTabletUi()) {
+                        // Navigation rail is always reachable on TV (bottom bars are not
+                        // D-pad friendly)
+                        if (isTabletUi() || isTelevisionUi) {
                             NavigationRail {
                                 TABS.fastForEach {
                                     NavigationRailItem(it)
@@ -99,7 +103,7 @@ object HomeScreen : Screen() {
                         }
                     },
                     bottomBar = {
-                        if (!isTabletUi()) {
+                        if (!isTabletUi() && !isTelevisionUi) {
                             val bottomNavVisible by produceState(initialValue = true) {
                                 showBottomNavEvent.receiveAsFlow().collectLatest { value = it }
                             }

@@ -1,14 +1,17 @@
 package eu.kanade.presentation.theme
 
 import android.content.Context
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialExpressiveTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import eu.kanade.domain.ui.UiPreferences
 import eu.kanade.domain.ui.model.AppTheme
+import eu.kanade.presentation.components.rememberTvFocusIndication
 import eu.kanade.presentation.theme.colorscheme.BaseColorScheme
 import eu.kanade.presentation.theme.colorscheme.CatppuccinColorScheme
 import eu.kanade.presentation.theme.colorscheme.GreenAppleColorScheme
@@ -25,6 +28,7 @@ import eu.kanade.presentation.theme.colorscheme.TidalWaveColorScheme
 import eu.kanade.presentation.theme.colorscheme.TokyoNightColorScheme
 import eu.kanade.presentation.theme.colorscheme.YinYangColorScheme
 import eu.kanade.presentation.theme.colorscheme.YotsubaColorScheme
+import eu.kanade.tachiyomi.util.system.isTelevision
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 
@@ -66,8 +70,17 @@ private fun BaseTachiyomiTheme(
                 isAmoled = isAmoled,
             )
         },
-        content = content,
-    )
+    ) {
+        // TV: swap the touch ripple for a D-pad focus indicator everywhere
+        val isTv = remember { context.isTelevision() }
+        val tvIndication = rememberTvFocusIndication()
+        val defaultIndication = LocalIndication.current
+        CompositionLocalProvider(
+            LocalIndication provides if (isTv) tvIndication else defaultIndication,
+        ) {
+            content()
+        }
+    }
 }
 
 private fun getThemeColorScheme(

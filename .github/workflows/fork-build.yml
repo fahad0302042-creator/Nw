@@ -1,0 +1,72 @@
+name: TV Fork Build
+
+# Builds installable APKs you can download and sideload onto your Android TV.
+# No signing secrets needed: artifacts are signed with the default debug key
+# (same as mihon's CI builds). The debug package id (app.mihon.dev) also installs
+# side-by-side with the official app.
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - 'arena/**'
+    paths-ignore:
+      - '**.md'
+      - 'fastlane/**'
+      - 'i18n/src/commonMain/moko-resources/**/strings.xml'
+      - 'i18n/src/commonMain/moko-resources/**/plurals.xml'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  apk:
+    name: Build installable APKs
+    runs-on: 'ubuntu-24.04'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # versionCommitCount derives the version name from git history
+          fetch-depth: 0
+
+      - name: Set up JDK
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+        with:
+          java-version-file: .github/.java-version
+          distribution: temurin
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+
+      - name: Format check is advisory for this fork
+        run: ./gradlew spotlessApply
+
+      - name: Build debug and release APKs
+        run: ./gradlew assembleDebug assembleRelease
+
+      - name: Upload debug APKs (side-by-side install with official Mihon)
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: mihon-tv-debug-apks
+          path: app/build/outputs/apk/debug/*.apk
+
+      - name: Upload release APK (arm64-v8a - most Android TVs)
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: mihon-tv-arm64-v8a-release.apk
+          path: app/build/outputs/apk/release/app-arm64-v8a-release.apk
+          if-no-files-found: ignore
+
+      - name: Upload release APK (universal - any device)
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: mihon-tv-universal-release.apk
+          path: app/build/outputs/apk/release/app-universal-release.apk
+          if-no-files-found: ignore

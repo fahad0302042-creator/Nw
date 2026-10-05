@@ -51,6 +51,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusGroup
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
@@ -95,6 +98,7 @@ import eu.kanade.tachiyomi.ui.setting.SettingsScreen
 import eu.kanade.tachiyomi.util.system.dpToPx
 import eu.kanade.tachiyomi.util.system.isBenchmarkBuildType
 import eu.kanade.tachiyomi.util.system.isNavigationBarNeedsScrim
+import eu.kanade.tachiyomi.util.system.isTelevision
 import eu.kanade.tachiyomi.util.system.updaterEnabled
 import eu.kanade.tachiyomi.util.view.setComposeContent
 import kotlinx.coroutines.channels.awaitClose
@@ -204,6 +208,21 @@ class MainActivity : BaseActivity() {
                         .collectLatest { incognito = it }
                 }
 
+                // TV: Compose doesn't grant focus automatically when a new screen is pushed,
+                // leaving the D-pad dead. Re-seed focus into the newly shown screen.
+                val isTv = remember { context.isTelevision() }
+                val screenFocusRequester = remember { FocusRequester() }
+                if (isTv) {
+                    LaunchedEffect(navigator.lastItem) {
+                        try {
+                            screenFocusRequester.requestFocus()
+                        } catch (_: IllegalStateException) {
+                            // Focus target not attached yet (e.g. mid-transition); the next
+                            // D-pad press still traverses into the screen content.
+                        }
+                    }
+                }
+
                 val scaffoldInsets = WindowInsets.navigationBars.only(WindowInsetsSides.Horizontal)
                 Scaffold(
                     topBar = {
@@ -217,7 +236,15 @@ class MainActivity : BaseActivity() {
                     contentWindowInsets = scaffoldInsets,
                 ) { contentPadding ->
                     // Consume insets already used by app state banners
-                    Box {
+                    Box(
+                        modifier = if (isTv) {
+                            Modifier
+                                .focusRequester(screenFocusRequester)
+                                .focusGroup()
+                        } else {
+                            Modifier
+                        },
+                    ) {
                         // Shows current screen
                         DefaultNavigatorScreenTransition(
                             navigator = navigator,
