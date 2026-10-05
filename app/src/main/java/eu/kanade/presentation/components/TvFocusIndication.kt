@@ -9,8 +9,10 @@ import androidx.compose.foundation.interaction.InteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Modifier
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -18,6 +20,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.ContentDrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.withTransform
+import androidx.compose.ui.node.DelegatingNode
 import androidx.compose.ui.node.DrawModifierNode
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -41,7 +44,7 @@ class TvFocusIndication(
     private val borderWidth: Dp = 3.dp,
 ) : IndicationNodeFactory {
 
-    override fun create(interactionSource: InteractionSource): Modifier.DelegatingNode {
+    override fun create(interactionSource: InteractionSource): DelegatingNode {
         return TvFocusIndicationNode(
             interactionSource = interactionSource,
             focusColor = focusColor,
@@ -70,12 +73,14 @@ class TvFocusIndication(
         private val focusColor: Color,
         private val cornerRadius: Dp,
         private val borderWidth: Dp,
-    ) : Modifier.Node(), DrawModifierNode {
+    ) : DelegatingNode(), DrawModifierNode {
 
         private val animatedScale = Animatable(DefaultScale)
-        private var isFocused = false
-        private var isPressed = false
-        private var isHovered = false
+
+        // Snapshot state so changes automatically re-invoke draw()
+        private var isFocused by mutableStateOf(false)
+        private var isPressed by mutableStateOf(false)
+        private var isHovered by mutableStateOf(false)
 
         override fun onAttach() {
             coroutineScope.launch {
@@ -84,28 +89,22 @@ class TvFocusIndication(
                         is FocusInteraction.Focus -> {
                             isFocused = true
                             launch { animatedScale.animateTo(FocusScale, focusAnimationSpec) }
-                            invalidateDraw()
                         }
                         is FocusInteraction.Unfocus -> {
                             isFocused = false
                             launch { animatedScale.animateTo(DefaultScale, focusAnimationSpec) }
-                            invalidateDraw()
                         }
                         is PressInteraction.Press -> {
                             isPressed = true
-                            invalidateDraw()
                         }
                         is PressInteraction.Release, is PressInteraction.Cancel -> {
                             isPressed = false
-                            invalidateDraw()
                         }
                         is HoverInteraction.Enter -> {
                             isHovered = true
-                            invalidateDraw()
                         }
                         is HoverInteraction.Exit -> {
                             isHovered = false
-                            invalidateDraw()
                         }
                     }
                 }

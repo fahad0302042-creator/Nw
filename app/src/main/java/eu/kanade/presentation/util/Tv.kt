@@ -2,7 +2,6 @@ package eu.kanade.presentation.util
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import eu.kanade.tachiyomi.util.system.isTelevision
 
@@ -14,11 +13,12 @@ import eu.kanade.tachiyomi.util.system.isTelevision
  * Unlike [isTabletUi], this is driven by the device UI mode rather than screen size:
  * 1080p televisions also report a large smallestScreenWidthDp, so the two usually agree,
  * but only this one guarantees leanback behavior.
+ *
+ * The result (from [isTelevision]) is cached for the process, so calling this during
+ * composition is cheap.
  */
 @Composable
 @ReadOnlyComposable
 fun isTvUi(): Boolean {
-    val context = LocalContext.current
-    // UI mode type never changes at runtime
-    return remember(context) { context.isTelevision() }
+    return LocalContext.current.isTelevision()
 }

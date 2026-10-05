@@ -51,11 +51,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusGroup
-import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.dp
 import androidx.core.animation.doOnEnd
@@ -209,17 +208,13 @@ class MainActivity : BaseActivity() {
                 }
 
                 // TV: Compose doesn't grant focus automatically when a new screen is pushed,
-                // leaving the D-pad dead. Re-seed focus into the newly shown screen.
+                // leaving the D-pad dead. Re-seed focus into the newly shown screen
+                // (lands on the first focusable element, e.g. the navigation rail).
                 val isTv = remember { context.isTelevision() }
-                val screenFocusRequester = remember { FocusRequester() }
+                val focusManager = LocalFocusManager.current
                 if (isTv) {
                     LaunchedEffect(navigator.lastItem) {
-                        try {
-                            screenFocusRequester.requestFocus()
-                        } catch (_: IllegalStateException) {
-                            // Focus target not attached yet (e.g. mid-transition); the next
-                            // D-pad press still traverses into the screen content.
-                        }
+                        focusManager.moveFocus(FocusDirection.Down)
                     }
                 }
 
@@ -236,15 +231,7 @@ class MainActivity : BaseActivity() {
                     contentWindowInsets = scaffoldInsets,
                 ) { contentPadding ->
                     // Consume insets already used by app state banners
-                    Box(
-                        modifier = if (isTv) {
-                            Modifier
-                                .focusRequester(screenFocusRequester)
-                                .focusGroup()
-                        } else {
-                            Modifier
-                        },
-                    ) {
+                    Box {
                         // Shows current screen
                         DefaultNavigatorScreenTransition(
                             navigator = navigator,
