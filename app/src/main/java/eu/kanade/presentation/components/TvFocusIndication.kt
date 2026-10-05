@@ -75,7 +75,7 @@ class TvFocusIndication(
         private val borderWidth: Dp,
     ) : DelegatingNode(), DrawModifierNode {
 
-        private val animatedScale = Animatable(DefaultScale)
+        private val animatedScale = Animatable(DEFAULT_SCALE)
 
         // Snapshot state so changes automatically re-invoke draw()
         private var isFocused by mutableStateOf(false)
@@ -88,11 +88,11 @@ class TvFocusIndication(
                     when (interaction) {
                         is FocusInteraction.Focus -> {
                             isFocused = true
-                            launch { animatedScale.animateTo(FocusScale, focusAnimationSpec) }
+                            launch { animatedScale.animateTo(FOCUS_SCALE, focusAnimationSpec) }
                         }
                         is FocusInteraction.Unfocus -> {
                             isFocused = false
-                            launch { animatedScale.animateTo(DefaultScale, focusAnimationSpec) }
+                            launch { animatedScale.animateTo(DEFAULT_SCALE, focusAnimationSpec) }
                         }
                         is PressInteraction.Press -> {
                             isPressed = true
@@ -113,7 +113,7 @@ class TvFocusIndication(
 
         override fun ContentDrawScope.draw() {
             val scale = animatedScale.value
-            if (scale != DefaultScale) {
+            if (scale != DEFAULT_SCALE) {
                 withTransform(
                     transformBlock = {
                         scale(scaleX = scale, scaleY = scale, pivot = center)
@@ -133,7 +133,7 @@ class TvFocusIndication(
 
                     // Soft fill so the focused element stands out from neighbours
                     drawRoundRect(
-                        color = focusColor.copy(alpha = FocusFillAlpha),
+                        color = focusColor.copy(alpha = FOCUS_FILL_ALPHA),
                         size = size,
                         cornerRadius = corner,
                     )
@@ -147,14 +147,14 @@ class TvFocusIndication(
                 }
                 isPressed -> {
                     drawRoundRect(
-                        color = focusColor.copy(alpha = PressFillAlpha),
+                        color = focusColor.copy(alpha = PRESS_FILL_ALPHA),
                         size = size,
                         cornerRadius = corner,
                     )
                 }
                 isHovered -> {
                     drawRoundRect(
-                        color = focusColor.copy(alpha = HoverFillAlpha),
+                        color = focusColor.copy(alpha = HOVER_FILL_ALPHA),
                         size = size,
                         cornerRadius = corner,
                     )
@@ -172,9 +172,9 @@ fun rememberTvFocusIndication(color: Color = MaterialTheme.colorScheme.primary):
     return remember(color) { TvFocusIndication(focusColor = color) }
 }
 
-private const val DefaultScale = 1f
-private const val FocusScale = 1.05f
-private const val FocusFillAlpha = 0.12f
-private const val PressFillAlpha = 0.16f
-private const val HoverFillAlpha = 0.08f
+private const val DEFAULT_SCALE = 1f
+private const val FOCUS_SCALE = 1.05f
+private const val FOCUS_FILL_ALPHA = 0.12f
+private const val PRESS_FILL_ALPHA = 0.16f
+private const val HOVER_FILL_ALPHA = 0.08f
 private val focusAnimationSpec = tween<Float>(durationMillis = 120)
