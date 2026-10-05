@@ -83,12 +83,12 @@ class TvFocusIndication(
                     when (interaction) {
                         is FocusInteraction.Focus -> {
                             isFocused = true
-                            launch { animatedScale.animateTo(FocusScale, FocusAnimationSpec) }
+                            launch { animatedScale.animateTo(FocusScale, focusAnimationSpec) }
                             invalidateDraw()
                         }
                         is FocusInteraction.Unfocus -> {
                             isFocused = false
-                            launch { animatedScale.animateTo(DefaultScale, FocusAnimationSpec) }
+                            launch { animatedScale.animateTo(DefaultScale, focusAnimationSpec) }
                             invalidateDraw()
                         }
                         is PressInteraction.Press -> {
@@ -178,4 +178,4 @@ private const val FocusScale = 1.05f
 private const val FocusFillAlpha = 0.12f
 private const val PressFillAlpha = 0.16f
 private const val HoverFillAlpha = 0.08f
-private val FocusAnimationSpec = tween<Float>(durationMillis = 120)
+private val focusAnimationSpec = tween<Float>(durationMillis = 120)
