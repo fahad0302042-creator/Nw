@@ -1,0 +1,137 @@
+name: TV Fork Build
+
+# Builds installable APKs you can download and sideload onto your Android TV.
+# No signing secrets needed: artifacts are signed with the default debug key
+# (same as mihon's CI builds). The debug package id (app.mihon.dev) also installs
+# side-by-side with the official app.
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - 'arena/**'
+    paths-ignore:
+      - '**.md'
+      - 'fastlane/**'
+      - 'i18n/src/commonMain/moko-resources/**/strings.xml'
+      - 'i18n/src/commonMain/moko-resources/**/plurals.xml'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  apk:
+    name: Build installable APKs
+    runs-on: 'ubuntu-24.04'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # versionCommitCount derives the version name from git history
+          fetch-depth: 0
+
+      - name: Set up JDK
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+        with:
+          java-version-file: .github/.java-version
+          distribution: temurin
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+
+      - name: Resolve dependencies (JitPack resilience)
+        shell: bash
+        run: |
+          # JitPack intermittently 404s commit-pinned artifacts while it rebuilds them;
+          # prime resolution with retries so later steps use the warmed cache.
+          for i in 1 2 3; do
+            if ./gradlew :app:dependencies --configuration debugCompileClasspath --console=plain -q > /dev/null 2>&1; then
+              echo "dependencies resolved on attempt $i"
+              exit 0
+            fi
+            echo "resolve attempt $i failed; waiting 60s for JitPack to rebuild..."
+            sleep 60
+          done
+          echo "could not resolve dependencies after 3 attempts"
+          exit 1
+
+      - name: Build debug and release APKs
+        id: build
+        shell: bash
+        run: |
+          set -o pipefail
+          ./gradlew assembleDebug assembleRelease --console=plain --stacktrace 2>&1 | tee build.log
+
+      - name: Publish build failure details
+        if: failure() && steps.build.outcome == 'failure'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set +e
+          # Surface errors as run annotations
+          grep -aE "^e: | error:|FAILED|What went wrong|Caused by" build.log | head -45 | sed 's/::/  /g' | \
+            while IFS= read -r line; do echo "::error::$line"; done
+
+          # Post the log tail to a persistent issue so it can be read via the API
+          {
+            echo "## :x: TV Fork Build failed"
+            echo ''
+            echo "- commit: ${{ github.sha }}"
+            echo "- run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            echo ''
+            echo '```'
+            tail -c 55000 build.log
+            echo '```'
+          } > fail-comment.md
+
+          ISSUE_NUM=$(gh issue list --repo "${{ github.repository }}" --state open \
+            --search 'in:title "CI build log"' --limit 1 --json number --jq '.[0].number? // empty')
+          if [ -z "$ISSUE_NUM" ]; then
+            ISSUE_NUM=$(gh issue create --repo "${{ github.repository }}" \
+              --title "CI build log (auto-posted on failures)" \
+              --body "The TV Fork Build workflow posts the Gradle log tail here when a build fails. Safe to close." \
+              --json number --jq '.number')
+          fi
+          if [ -n "$ISSUE_NUM" ]; then
+            gh issue comment "$ISSUE_NUM" --repo "${{ github.repository }}" --body-file fail-comment.md || true
+          fi
+          exit 0
+
+      - name: Upload build log
+        if: failure() && steps.build.outcome == 'failure'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: build-log
+          path: build.log
+          if-no-files-found: ignore
+
+      - name: Upload debug APKs (side-by-side install with official Mihon)
+        if: success()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: mihon-tv-debug-apks
+          path: app/build/outputs/apk/debug/*.apk
+
+      - name: Upload release APK (arm64-v8a - most Android TVs)
+        if: success()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: mihon-tv-arm64-v8a-release.apk
+          path: app/build/outputs/apk/release/app-arm64-v8a-release.apk
+          if-no-files-found: ignore
+
+      - name: Upload release APK (universal - any device)
+        if: success()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: mihon-tv-universal-release.apk
+          path: app/build/outputs/apk/release/app-universal-release.apk
+          if-no-files-found: ignore
