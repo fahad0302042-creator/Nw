@@ -58,6 +58,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import app.nw.tv.model.Manga
 
 private val Background = Color(0xFF090A0F)
 private val SurfaceDark = Color(0xFF14161E)
@@ -65,7 +66,6 @@ private val SurfaceRaised = Color(0xFF1D202A)
 private val Lavender = Color(0xFFB8A0FF)
 private val Muted = Color(0xFFA8A8B5)
 
-private data class Manga(val title: String, val subtitle: String, val color: Color, val progress: String = "")
 private val continueReading = listOf(
     Manga("The Summer Hikaru Died", "Chapter 18", Color(0xFF4B385F), "62%"),
     Manga("Witch Hat Atelier", "Chapter 85", Color(0xFF31556A), "24%"),

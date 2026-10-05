@@ -15,6 +15,10 @@ The repository is currently a clean Android project scaffold with a focused TV U
 
 The current data is intentionally local demo data. The next milestone is wiring Mihon's data layer and extension compatibility behind this UI without changing the TV interaction model.
 
+## CI
+
+Every push and pull request runs unit tests and builds a debug APK through GitHub Actions. The generated APK is uploaded as the `nw-tv-debug-apk` workflow artifact. The workflow uses JDK 17, Android SDK, and Gradle 8.10.2; no local Gradle installation is required for contributors using Android Studio.
+
 ## Build
 
 Open the repository in Android Studio Ladybug or newer and run the `app` configuration on an Android TV emulator/device. The app targets Android 8.0+ (`minSdk 26`) and Android TV (`leanback` feature).
