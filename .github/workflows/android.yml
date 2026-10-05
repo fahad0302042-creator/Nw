@@ -41,7 +41,7 @@ jobs:
         if: always()
         run: |
           if [ -f unit-test.log ]; then
-            echo "::error file=gradle::$(tail -40 unit-test.log | tr '\n' ' ' | cut -c1-900)"
+            echo "::error file=gradle::$(grep -E 'FAILURE:|What went wrong:|Execution failed|Caused by:|e: ' unit-test.log | tail -12 | tr '\n' ' ' | cut -c1-900)"
           fi
           for log in unit-test.log assemble.log; do
             if [ -f "$log" ]; then
