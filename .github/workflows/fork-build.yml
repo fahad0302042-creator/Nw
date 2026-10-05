@@ -23,6 +23,7 @@ concurrency:
 
 permissions:
   contents: read
+  issues: write
 
 jobs:
   apk:
@@ -55,20 +56,35 @@ jobs:
       - name: Publish build failure details
         if: failure() && steps.build.outcome == 'failure'
         shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Surface compiler/resource errors as run annotations + job summary
-          grep -E "^e: | error:" build.log | head -40 | while IFS= read -r line; do
-            echo "::error::${line//::/  }"
-          done
+          set +e
+          # Surface errors as run annotations
+          grep -aE "^e: | error:|FAILED|What went wrong|Caused by" build.log | head -45 | sed 's/::/  /g' | \
+            while IFS= read -r line; do echo "::error::$line"; done
+
+          # Post the log tail to a persistent issue so it can be read via the API
           {
-            echo "## :x: Build failed"
-            echo '```'
-            sed -n '/FAILURE: Build failed/,/^\* Try:/p' build.log | head -60
+            echo "## :x: TV Fork Build failed"
             echo ''
-            echo '--- last lines ---'
-            tail -40 build.log
+            echo "- commit: ${{ github.sha }}"
+            echo "- run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            echo ''
             echo '```'
-          } >> "$GITHUB_STEP_SUMMARY" || true
+            tail -c 55000 build.log
+            echo '```'
+          } > fail-comment.md
+
+          ISSUE_NUM=$(gh issue list --repo "${{ github.repository }}" --state open \
+            --search 'in:title "CI build log"' --limit 1 --json number --jq '.[0].number')
+          if [ -z "$ISSUE_NUM" ]; then
+            ISSUE_NUM=$(gh issue create --repo "${{ github.repository }}" \
+              --title "CI build log (auto-posted on failures)" \
+              --body "The TV Fork Build workflow posts the Gradle log tail here when a build fails. Safe to close." \
+              --json number --jq '.number')
+          fi
+          gh issue comment "$ISSUE_NUM" --repo "${{ github.repository }}" --body-file fail-comment.md
 
       - name: Upload build log
         if: failure() && steps.build.outcome == 'failure'
