@@ -46,15 +46,47 @@ jobs:
         uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
 
       - name: Build debug and release APKs
-        run: ./gradlew assembleDebug assembleRelease
+        id: build
+        shell: bash
+        run: |
+          set -o pipefail
+          ./gradlew assembleDebug assembleRelease --console=plain --stacktrace 2>&1 | tee build.log
+
+      - name: Publish build failure details
+        if: failure() && steps.build.outcome == 'failure'
+        shell: bash
+        run: |
+          # Surface compiler/resource errors as run annotations + job summary
+          grep -E "^e: | error:" build.log | head -40 | while IFS= read -r line; do
+            echo "::error::${line//::/  }"
+          done
+          {
+            echo "## :x: Build failed"
+            echo '```'
+            sed -n '/FAILURE: Build failed/,/^\* Try:/p' build.log | head -60
+            echo ''
+            echo '--- last lines ---'
+            tail -40 build.log
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY" || true
+
+      - name: Upload build log
+        if: failure() && steps.build.outcome == 'failure'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: build-log
+          path: build.log
+          if-no-files-found: ignore
 
       - name: Upload debug APKs (side-by-side install with official Mihon)
+        if: success()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: mihon-tv-debug-apks
           path: app/build/outputs/apk/debug/*.apk
 
       - name: Upload release APK (arm64-v8a - most Android TVs)
+        if: success()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: mihon-tv-arm64-v8a-release.apk
@@ -62,6 +94,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Upload release APK (universal - any device)
+        if: success()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: mihon-tv-universal-release.apk
