@@ -19,6 +19,7 @@ concurrency:
 
 permissions:
   contents: read
+  issues: write
 
 jobs:
   build:
@@ -55,7 +56,38 @@ jobs:
           exit 1
 
       - name: Check code format
-        run: ./gradlew spotlessCheck
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set +e
+          ./gradlew spotlessCheck --console=plain > format.log 2>&1
+          rc=$?
+          if [ $rc -eq 0 ]; then
+            echo "format ok"
+            exit 0
+          fi
+          grep -aE "ktlint|\.kt|lint violation|Rule.*violation" format.log | head -50 | sed 's/::/  /g' | \
+            while IFS= read -r line; do echo "::error::$line"; done
+          {
+            echo "## Format check failed (spotlessCheck)"
+            echo ''
+            echo "```"
+            grep -aE -B1 -A3 "ktlint|violation|\.kt" format.log | head -100
+            echo "```"
+          } > fmt.md
+          ISSUE_NUM=$(gh issue list --repo "${{ github.repository }}" --state open \
+            --search 'in:title "CI build log"' --limit 1 --json number --jq '.[0].number? // empty')
+          if [ -z "$ISSUE_NUM" ]; then
+            ISSUE_NUM=$(gh issue create --repo "${{ github.repository }}" \
+              --title "CI build log (auto-posted on failures)" \
+              --body "Gradle logs from failed CI runs." \
+              --json number --jq '.number')
+          fi
+          if [ -n "$ISSUE_NUM" ]; then
+            gh issue comment "$ISSUE_NUM" --repo "${{ github.repository }}" --body-file fmt.md || true
+          fi
+          exit $rc
 
       - name: Run unit tests
         id: unit_tests
