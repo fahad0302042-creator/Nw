@@ -37,6 +37,20 @@ jobs:
       - name: Build debug APK
         run: set -o pipefail; gradle assembleDebug --no-daemon --stacktrace --console=plain 2>&1 | tee assemble.log
 
+      - name: Publish Gradle diagnostics
+        if: always()
+        run: |
+          for log in unit-test.log assemble.log; do
+            if [ -f "$log" ]; then
+              {
+                echo "### $log"
+                echo '```text'
+                tail -80 "$log"
+                echo '```'
+              } >> "$GITHUB_STEP_SUMMARY"
+            fi
+          done
+
       - name: Upload build diagnostics
         if: always()
         uses: actions/upload-artifact@v4
