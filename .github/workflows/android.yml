@@ -23,9 +23,9 @@ jobs:
           java-version: '17'
           cache: gradle
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-
+      # GitHub-hosted Android runners already include the SDK and build tools.
+      # Keeping this workflow independent of the setup-android action makes it
+      # resilient to action runtime changes while Gradle accepts the runner SDK.
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
