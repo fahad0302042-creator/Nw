@@ -1,4 +1,4 @@
-# Nw — Mihon for Android TV
+# Mihon TV — Mihon, adapted for Android TV
 
 An Android TV adaptation of **[Mihon](https://github.com/mihonapp/mihon)**, forked from
 [`mihonapp/mihon @ v0.20.4`](https://github.com/mihonapp/mihon/releases/tag/v0.20.4).

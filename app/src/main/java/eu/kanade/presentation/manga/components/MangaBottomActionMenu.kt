@@ -56,7 +56,9 @@ import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import eu.kanade.presentation.components.DownloadDropdownMenu
 import eu.kanade.presentation.components.DropdownMenu
+import eu.kanade.presentation.components.rememberTvFocusIndication
 import eu.kanade.presentation.manga.DownloadAction
+import eu.kanade.presentation.util.isTvUi
 import eu.kanade.tachiyomi.R
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -197,7 +199,7 @@ private fun RowScope.Button(
             .weight(animatedWeight)
             .combinedClickable(
                 interactionSource = null,
-                indication = ripple(bounded = false),
+                indication = if (isTvUi()) rememberTvFocusIndication() else ripple(bounded = false),
                 onLongClick = onLongClick,
                 onClick = onClick,
             ),

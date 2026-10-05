@@ -32,6 +32,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import eu.kanade.presentation.components.DropdownMenu
+import eu.kanade.presentation.components.rememberTvFocusIndication
+import eu.kanade.presentation.util.isTvUi
 import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.data.download.model.Download
 import tachiyomi.i18n.MR
@@ -249,6 +251,7 @@ private fun ErrorIndicator(
     }
 }
 
+@Composable
 private fun Modifier.commonClickable(
     enabled: Boolean,
     hapticFeedback: HapticFeedback,
@@ -263,10 +266,14 @@ private fun Modifier.commonClickable(
     onClick = onClick,
     role = Role.Button,
     interactionSource = null,
-    indication = ripple(
-        bounded = false,
-        radius = IconButtonTokens.StateLayerSize / 2,
-    ),
+    indication = if (isTvUi()) {
+        rememberTvFocusIndication()
+    } else {
+        ripple(
+            bounded = false,
+            radius = IconButtonTokens.StateLayerSize / 2,
+        )
+    },
 )
 
 private val IndicatorSize = 26.dp
