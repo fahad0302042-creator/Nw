@@ -77,14 +77,17 @@ jobs:
           } > fail-comment.md
 
           ISSUE_NUM=$(gh issue list --repo "${{ github.repository }}" --state open \
-            --search 'in:title "CI build log"' --limit 1 --json number --jq '.[0].number')
+            --search 'in:title "CI build log"' --limit 1 --json number --jq '.[0].number? // empty')
           if [ -z "$ISSUE_NUM" ]; then
             ISSUE_NUM=$(gh issue create --repo "${{ github.repository }}" \
               --title "CI build log (auto-posted on failures)" \
               --body "The TV Fork Build workflow posts the Gradle log tail here when a build fails. Safe to close." \
               --json number --jq '.number')
           fi
-          gh issue comment "$ISSUE_NUM" --repo "${{ github.repository }}" --body-file fail-comment.md
+          if [ -n "$ISSUE_NUM" ]; then
+            gh issue comment "$ISSUE_NUM" --repo "${{ github.repository }}" --body-file fail-comment.md || true
+          fi
+          exit 0
 
       - name: Upload build log
         if: failure() && steps.build.outcome == 'failure'
